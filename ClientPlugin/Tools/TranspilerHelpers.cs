@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using HarmonyLib;
 
-namespace ClientPlugin.Tools;
+namespace Pulsar.Shared.Utils;
 
 // Useful methods in transpiler patches.
 // For usage examples please search this repo:
@@ -208,12 +208,12 @@ public static class TranspilerHelpers
         var dir = Path.GetDirectoryName(callerFilePath);
         if (dir == null)
             return;
-            
-        var name = patchedMethod == null 
-            ? callerMemberName.EndsWith("Transpiler") 
-                ? callerMemberName.Substring(0, callerMemberName.Length - "Transpiler".Length) 
+
+        var name = patchedMethod == null
+            ? callerMemberName.EndsWith("Transpiler")
+                ? callerMemberName.Substring(0, callerMemberName.Length - "Transpiler".Length)
                 : callerMemberName
-            : patchedMethod.Name;
+            : patchedMethod.Name.Replace(".ctor", "Constructor").Replace(".cctor", "StaticConstructor");
             
         var path = Path.Combine(dir, $"{name}.{suffix}.il");
             

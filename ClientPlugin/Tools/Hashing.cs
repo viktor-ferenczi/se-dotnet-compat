@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 
-namespace ClientPlugin.Tools;
+namespace Pulsar.Shared.Utils;
 
 public static class Hashing
 {
