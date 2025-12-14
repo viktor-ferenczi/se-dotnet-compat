@@ -1,0 +1,792 @@
+diff --git a/Sandbox.Game/Sandbox/Engine/Analytics/MySpaceAnalytics.cs b/Sandbox.Game/Sandbox/Engine/Analytics/MySpaceAnalytics.cs
+index bb67b08b..5a6ab2eb 100644
+--- a/Sandbox.Game/Sandbox/Engine/Analytics/MySpaceAnalytics.cs
++++ b/Sandbox.Game/Sandbox/Engine/Analytics/MySpaceAnalytics.cs
+@@ -413,6 +413,9 @@ public sealed class MySpaceAnalytics : MyAnalyticsManager
+ 
+ 	private void StartSession(bool firstTimeRun)
+ 	{
++		// DISABLED ANALYTICS
++		return;
++
+ 		if (!m_isSessionStarted)
+ 		{
+ 			if (m_hashedUserID == null)
+diff --git a/Sandbox.Game/Sandbox/Engine/Utils/MyConfig.cs b/Sandbox.Game/Sandbox/Engine/Utils/MyConfig.cs
+index e8cc360a..3506db22 100644
+--- a/Sandbox.Game/Sandbox/Engine/Utils/MyConfig.cs
++++ b/Sandbox.Game/Sandbox/Engine/Utils/MyConfig.cs
+@@ -1,3 +1,6 @@
++// See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
++#pragma warning disable SYSLIB0011
++
+ using System;
+ using System.Collections.Generic;
+ using System.IO;
+@@ -2355,3 +2358,5 @@ public class MyConfig : MyConfigBase, IMyConfig
+ 		MyNewGameScreenABTestHelper.Instance.ActivateTest();
+ 	}
+ }
++
++#pragma warning restore SYSLIB0011
+diff --git a/Sandbox.Game/Sandbox/Engine/Utils/MyFakes.cs b/Sandbox.Game/Sandbox/Engine/Utils/MyFakes.cs
+index e06692ac..34af5d97 100644
+--- a/Sandbox.Game/Sandbox/Engine/Utils/MyFakes.cs
++++ b/Sandbox.Game/Sandbox/Engine/Utils/MyFakes.cs
+@@ -1223,7 +1223,11 @@ public static class MyFakes
+ 		ENABLE_WAIT_UNTIL_MULTIPLAYER_READY = true;
+ 		ENABLE_PRELOAD_CHARACTER_ANIMATIONS = true;
+ 		LOADING_STREAMING_TIMEOUT_ENABLED = true;
++#if DEBUG
++		ENABLE_MINIDUMP_SENDING = false;
++#else
+ 		ENABLE_MINIDUMP_SENDING = true;
++#endif
+ 		COLLECT_SUSPEND_DUMPS = false;
+ 		USE_GPS_AS_FRIENDLY_SPAWN_LOCATIONS = false;
+ 		I_AM_READY_FOR_NEW_SCRIPT_SCREEN = true;
+diff --git a/Sandbox.Game/Sandbox/Game/Entities/Character/MyCharacter.cs b/Sandbox.Game/Sandbox/Game/Entities/Character/MyCharacter.cs
+index d7e3fab5..02b96278 100644
+--- a/Sandbox.Game/Sandbox/Game/Entities/Character/MyCharacter.cs
++++ b/Sandbox.Game/Sandbox/Game/Entities/Character/MyCharacter.cs
+@@ -8153,7 +8153,7 @@ public class MyCharacter : MySkinnedEntity, IMyCameraController, IMyControllable
+ 			{
+ 				MyGuiScreenGamePlay.ActiveGameplayScreen.CloseScreen();
+ 			}
+-			MyCubeBuilder.Static.Deactivate();
++			MyCubeBuilder.Static?.Deactivate();
+ 			if (!base.Closed)
+ 			{
+ 				RadioReceiver.Clear();
+diff --git a/Sandbox.Game/Sandbox/Game/Entities/Cube/MyGridClipboard.cs b/Sandbox.Game/Sandbox/Game/Entities/Cube/MyGridClipboard.cs
+index 1e3baf64..6587d03f 100644
+--- a/Sandbox.Game/Sandbox/Game/Entities/Cube/MyGridClipboard.cs
++++ b/Sandbox.Game/Sandbox/Game/Entities/Cube/MyGridClipboard.cs
+@@ -534,7 +534,7 @@ public class MyGridClipboard
+ 		{
+ 			action?.Invoke(this, afterPaste);
+ 		}
+-		if (MyClipboardComponent.Static.Clipboard == this)
++		if (MyClipboardComponent.Static?.Clipboard == this)
+ 		{
+ 			if (MyCoordinateSystem.Static != null)
+ 			{
+diff --git a/Sandbox.Game/Sandbox/Game/Entities/Cube/MyGridShape.cs b/Sandbox.Game/Sandbox/Game/Entities/Cube/MyGridShape.cs
+index d5008f9b..4fa67e59 100644
+--- a/Sandbox.Game/Sandbox/Game/Entities/Cube/MyGridShape.cs
++++ b/Sandbox.Game/Sandbox/Game/Entities/Cube/MyGridShape.cs
+@@ -136,13 +136,15 @@ public class MyGridShape : IDisposable
+ 
+ 	private void AddShapesFromCollector()
+ 	{
++		var shapes = new HkShape[255];
++
+ 		int num = 0;
+ 		for (int i = 0; i < m_blockCollector.ShapeInfos.Count; i++)
+ 		{
+ 			MyCubeBlockCollector.ShapeInfo shapeInfo = m_blockCollector.ShapeInfos[i];
+ 			HkShape[] obj = null;
+ 			Span<HkShape> span = default(Span<HkShape>);
+-			span = ((shapeInfo.Count >= 256) ? ((Span<HkShape>)(obj = new HkShape[shapeInfo.Count])) : stackalloc HkShape[shapeInfo.Count]);
++			span = shapeInfo.Count >= 256 ? (Span<HkShape>)(obj = new HkShape[shapeInfo.Count]) : shapes.AsSpan(0, shapeInfo.Count);
+ 			for (int j = 0; j < shapeInfo.Count; j++)
+ 			{
+ 				span[j] = m_blockCollector.Shapes[num + j];
+diff --git a/Sandbox.Game/Sandbox/Game/GameSystems/MyHeightMapLoadingSystem.cs b/Sandbox.Game/Sandbox/Game/GameSystems/MyHeightMapLoadingSystem.cs
+index cd2d35d8..a80fb161 100644
+--- a/Sandbox.Game/Sandbox/Game/GameSystems/MyHeightMapLoadingSystem.cs
++++ b/Sandbox.Game/Sandbox/Game/GameSystems/MyHeightMapLoadingSystem.cs
+@@ -76,6 +76,10 @@ public class MyHeightMapLoadingSystem : MySessionComponentBase
+ 
+ 	private void Release<T>(string path, Dictionary<string, int> counter, ConcurrentDictionary<string, T> maps, Action<T> dispose)
+ 	{
++		// The maps can already be set to null during unload
++		if (maps == null)
++			return;
++
+ 		lock (counter)
+ 		{
+ 			counter.TryGetValue(path, out var value);
+diff --git a/Sandbox.Game/Sandbox/Game/Replication/StateGroups/MyPropertySyncStateGroup.cs b/Sandbox.Game/Sandbox/Game/Replication/StateGroups/MyPropertySyncStateGroup.cs
+index fb476aea..faede855 100644
+--- a/Sandbox.Game/Sandbox/Game/Replication/StateGroups/MyPropertySyncStateGroup.cs
++++ b/Sandbox.Game/Sandbox/Game/Replication/StateGroups/MyPropertySyncStateGroup.cs
+@@ -131,7 +131,7 @@ public sealed class MyPropertySyncStateGroup : IMyStateGroup, IMyNetObject, IMyE
+ 		syncType.PropertyCountChanged += OnPropertyCountChanged;
+ 		m_properties = syncType.Properties;
+ 		m_propertyTimestamps = new List<MyTimeSpan>(m_properties.Count);
+-		if (Sync.IsServer)
++		if (Sync.IsServer && MyMultiplayer.Static != null)
+ 		{
+ 			for (int num = 0; num < m_properties.Count; num++)
+ 			{
+diff --git a/Sandbox.Game/Sandbox/Game/Screens/MyGuiScreenMainMenuBase.cs b/Sandbox.Game/Sandbox/Game/Screens/MyGuiScreenMainMenuBase.cs
+index 67db0b59..189c55c8 100644
+--- a/Sandbox.Game/Sandbox/Game/Screens/MyGuiScreenMainMenuBase.cs
++++ b/Sandbox.Game/Sandbox/Game/Screens/MyGuiScreenMainMenuBase.cs
+@@ -2,6 +2,7 @@ using System;
+ using System.Collections.Generic;
+ using System.Globalization;
+ using System.Net;
++using System.Runtime.InteropServices;
+ using System.Text;
+ using Sandbox.Engine.Analytics;
+ using Sandbox.Engine.Networking;
+@@ -260,7 +261,7 @@ public abstract class MyGuiScreenMainMenuBase : MyGuiScreenBase
+ 			MyGuiManager.DrawString("BuildInfoHighlight", BranchName.ToString(), normalizedCoord, 0.6f, new Color(MyGuiConstants.LABEL_TEXT_COLOR * m_transitionAlpha, 0.6f), MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_BOTTOM);
+ 			normalizedCoord.X -= zero.X;
+ 		}
+-		string text = MyFinalBuildConstants.APP_VERSION_STRING_DOTS.ToString() + $" b{MyPerGameSettings.BasicGameInfo.ClientBuildNumber}";
++		string text = MyFinalBuildConstants.APP_VERSION_STRING_DOTS + $" b{MyPerGameSettings.BasicGameInfo.ClientBuildNumber} on {RuntimeInformation.FrameworkDescription}";
+ 		MyGuiManager.DrawString("BuildInfo", text, normalizedCoord, 0.6f, new Color(MyGuiConstants.LABEL_TEXT_COLOR * m_transitionAlpha, 0.6f), MyGuiDrawAlignEnum.HORISONTAL_RIGHT_AND_VERTICAL_BOTTOM);
+ 	}
+ 
+diff --git a/Sandbox.Game/Sandbox/MyInitializer.cs b/Sandbox.Game/Sandbox/MyInitializer.cs
+index cbba6db0..b9b3151b 100644
+--- a/Sandbox.Game/Sandbox/MyInitializer.cs
++++ b/Sandbox.Game/Sandbox/MyInitializer.cs
+@@ -157,6 +157,8 @@ public static class MyInitializer
+ 		{
+ 			Thread.CurrentThread.Name = "Main thread";
+ 		}
++
++#if !DEBUG
+ 		IMySimplifiedErrorReporter simplifiedErrorReporter = ErrorPlatform.TryToCreateSimplifiedErrorReporter(MyLog.Default);
+ 		if (simplifiedErrorReporter != null)
+ 		{
+@@ -168,8 +170,11 @@ public static class MyInitializer
+ 		{
+ 			ProcessUnhandledException(new MyNativeException(), x);
+ 		});
++#endif
++
+ 		Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+ 		Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
++
+ 		if (MyFakes.ENABLE_MINIDUMP_SENDING && MyFileSystem.IsInitialized)
+ 		{
+ 			if (MyFakes.COLLECT_SUSPEND_DUMPS)
+@@ -178,6 +183,8 @@ public static class MyInitializer
+ 			}
+ 			MyMiniDump.CleanupOldDumps();
+ 		}
++
++#if !DEBUG
+ 		ErrorPlatform.CleanupCrashAnalytics();
+ 		MyErrorReporter.UpdateHangAnalytics();
+ 		void UnhandledManagedException(object sender, UnhandledExceptionEventArgs args)
+@@ -193,6 +200,7 @@ public static class MyInitializer
+ 				}
+ 			}
+ 		}
++#endif
+ 	}
+ 
+ 	public static void InvokeAfterRun()
+diff --git a/Sandbox.Game/Sandbox/MySandboxGame.cs b/Sandbox.Game/Sandbox/MySandboxGame.cs
+index 8dab8e90..bc7cee8e 100644
+--- a/Sandbox.Game/Sandbox/MySandboxGame.cs
++++ b/Sandbox.Game/Sandbox/MySandboxGame.cs
+@@ -2389,24 +2389,29 @@ public class MySandboxGame : Sandbox.Engine.Platform.Game, IDisposable
+ 
+ 	private void InitModAPI()
+ 	{
++#if !DEBUG
+ 		try
+ 		{
++#endif
+ 			if (MyVRage.Platform.Scripting.IsRuntimeCompilationSupported)
+ 			{
+ 				InitIlCompiler();
+ 				InitIlChecker();
+ 			}
++#if !DEBUG
+ 		}
+ 		catch (Exception ex)
+ 		{
+ 			Log.Error("Error during ModAPI initialization: {0}", ex.Message);
+ 			ShowHotfixPopup = true;
+ 		}
++#endif
+ 	}
+ 
+ 	private static void OnDotNetHotfixPopupClosed(MyGuiScreenMessageBox.ResultEnum result)
+ 	{
+-		Process.Start("https://support.microsoft.com/kb/3120241");
++		// This would fail with System.ComponentModel.Win32Exception: The system cannot find the file specified
++		//Process.Start("https://support.microsoft.com/kb/3120241");
+ 		ClosePopup(result);
+ 	}
+ 
+diff --git a/SpaceEngineers.Game/SpaceEngineers/Game/MySpaceGameDefaultIlChecker.cs b/SpaceEngineers.Game/SpaceEngineers/Game/MySpaceGameDefaultIlChecker.cs
+index 3fe099d4..ad5eabeb 100644
+--- a/SpaceEngineers.Game/SpaceEngineers/Game/MySpaceGameDefaultIlChecker.cs
++++ b/SpaceEngineers.Game/SpaceEngineers/Game/MySpaceGameDefaultIlChecker.cs
+@@ -115,7 +115,7 @@ public class MySpaceGameDefaultIlChecker : MySandboxGame.IGameCustomIlChecker
+ 		handle.AllowMembers(MyWhitelistTarget.Both, typeof(ValueType).GetMethod("Equals"), typeof(ValueType).GetMethod("GetHashCode"), typeof(ValueType).GetMethod("ToString"));
+ 		handle.AllowMembers(MyWhitelistTarget.Both, typeof(Environment).GetProperty("CurrentManagedThreadId", BindingFlags.Static | BindingFlags.Public), typeof(Environment).GetProperty("NewLine", BindingFlags.Static | BindingFlags.Public), typeof(Environment).GetProperty("ProcessorCount", BindingFlags.Static | BindingFlags.Public));
+ 		Type type = typeof(Type).Assembly.GetType("System.RuntimeType");
+-		handle.AllowMembers(MyWhitelistTarget.Both, type.GetMethod("op_Inequality"), type.GetMethod("GetFields", new Type[1] { typeof(BindingFlags) }));
++		handle.AllowMembers(MyWhitelistTarget.Both, type.GetMethod("GetFields", new Type[1] { typeof(BindingFlags) }));		
+ 		handle.AllowMembers(MyWhitelistTarget.Both, (from m in AllDeclaredMembers(typeof(Delegate))
+ 			where m.Name != "CreateDelegate"
+ 			select m).ToArray());
+diff --git a/SpaceEngineers.Game/SpaceEngineers/Game/MySpaceGameDefaultIlCompiler.cs b/SpaceEngineers.Game/SpaceEngineers/Game/MySpaceGameDefaultIlCompiler.cs
+index 505ac015..5cec2b4d 100644
+--- a/SpaceEngineers.Game/SpaceEngineers/Game/MySpaceGameDefaultIlCompiler.cs
++++ b/SpaceEngineers.Game/SpaceEngineers/Game/MySpaceGameDefaultIlCompiler.cs
+@@ -4,6 +4,7 @@ using System.Collections.Immutable;
+ using System.IO;
+ using System.Reflection;
+ using System.Text.RegularExpressions;
++using System.Xml;
+ using Sandbox;
+ using Sandbox.Engine.Networking;
+ using Sandbox.Engine.Utils;
+@@ -28,6 +29,7 @@ public class MySpaceGameDefaultIlCompiler : MySandboxGame.IGameCustomIlCompiler
+ {
+ 	public void InitIlCompiler()
+ 	{
++		// assemblyPaths
+ 		List<string> list = new List<string>();
+ 		list.Add(Path.Combine(Assembly.Load("netstandard").Location));
+ 		list.Add(Path.Combine(MyFileSystem.ExePath, "Sandbox.Game.dll"));
+@@ -39,23 +41,23 @@ public class MySpaceGameDefaultIlCompiler : MySandboxGame.IGameCustomIlCompiler
+ 		list.Add(Path.Combine(MyFileSystem.ExePath, "VRage.Game.dll"));
+ 		list.Add(Path.Combine(MyFileSystem.ExePath, "VRage.Render.dll"));
+ 		list.Add(Path.Combine(MyFileSystem.ExePath, "VRage.Input.dll"));
++		list.Add(Path.Combine(MyFileSystem.ExePath, "VRage.Scripting.dll"));
+ 		list.Add(Path.Combine(MyFileSystem.ExePath, "SpaceEngineers.ObjectBuilders.dll"));
+ 		list.Add(Path.Combine(MyFileSystem.ExePath, "SpaceEngineers.Game.dll"));
+-		list.Add(Path.Combine(MyFileSystem.ExePath, "System.Collections.Immutable.dll"));
+-		list.Add(Path.Combine(MyFileSystem.ExePath, "ProtoBuf.Net.Core.dll"));
++		list.Add(Path.Combine(MyFileSystem.ExePath, "protobuf-net.Core.dll"));
++		
++		// assemblyLocations
+ 		List<string> list2 = list;
+ 		Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+ 		foreach (Assembly assembly in assemblies)
+ 		{
+ 			string name = assembly.GetName().Name;
+-			if (name == "System.Runtime" || name == "System.Collections")
++			if (name.StartsWith("System."))
+ 			{
+ 				list2.Add(assembly.Location);
+ 			}
+ 		}
+-		string empty = string.Empty;
+-		string empty2 = string.Empty;
+-		MyVRage.Platform.Scripting.Initialize(MySandboxGame.Static.UpdateThread, list2, new Type[14]
++		MyVRage.Platform.Scripting.Initialize(MySandboxGame.Static.UpdateThread, list2, new Type[]
+ 		{
+ 			typeof(MyTuple),
+ 			typeof(Vector2),
+@@ -70,13 +72,23 @@ public class MySpaceGameDefaultIlCompiler : MySandboxGame.IGameCustomIlCompiler
+ 			typeof(MyIni),
+ 			typeof(ImmutableArray),
+ 			typeof(IMyAirVent),
+-			typeof(MySprite)
++			typeof(MySprite),
++			typeof(VRage.Scripting.MemorySafeTypes.MemorySafeArrayList),
++
++			// Items moved from MyScriptCompiler's constructor
++			GetType(),
++			typeof(int),
++			typeof(XmlEntity),
++			typeof(HashSet<>),
++			typeof(Dictionary<, >),
++			typeof(Uri)
++
+ 		}, new string[6]
+ 		{
+ 			GetPrefixedBranchName(),
+ 			"STABLE",
+-			empty,
+-			empty2,
++			string.Empty,
++			string.Empty,
+ 			"VERSION_" + ((Version)MyFinalBuildConstants.APP_VERSION).Minor,
+ 			"BUILD_" + ((Version)MyFinalBuildConstants.APP_VERSION).Build
+ 		}, MyFakes.ENABLE_ROSLYN_SCRIPT_DIAGNOSTICS ? Path.Combine(MyFileSystem.UserDataPath, "ScriptDiagnostics") : null, MyFakes.ENABLE_SCRIPTS_PDB);
+diff --git a/SpaceEngineers/SpaceEngineers/MyProgram.cs b/SpaceEngineers/SpaceEngineers/MyProgram.cs
+index b87b99ba..bbc2b4cf 100644
+--- a/SpaceEngineers/SpaceEngineers/MyProgram.cs
++++ b/SpaceEngineers/SpaceEngineers/MyProgram.cs
+@@ -27,6 +27,10 @@ using VRage.UserInterface;
+ using VRage.Utils;
+ using VRageRender;
+ 
++// Enabling BinaryFormatter. It will not work on .Net 9
++// See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
++using System.Runtime.Serialization.Formatters.Binary;
++
+ namespace SpaceEngineers;
+ 
+ public static class MyProgram
+@@ -37,6 +41,10 @@ public static class MyProgram
+ 
+ 	public static void Main(string[] args)
+ 	{
++		// Enabling BinaryFormatter. It will not work on .Net 9
++		// See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
++		AppContext.SetSwitch("System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization", true);
++
+ 		Exception ex = null;
+ 		try
+ 		{
+@@ -140,11 +148,13 @@ public static class MyProgram
+ 		{
+ 			spaceEngineersGame.Run(customRenderLoop: false, m_startup.DisposeSplashScreen);
+ 		}
++#if !DEBUG
+ 		catch (Exception exception)
+ 		{
+ 			MyDefaultLogInject.WriteLine(exception);
+ 			throw;
+ 		}
++#endif
+ 		finally
+ 		{
+ 			spaceEngineersGame.Dispose();
+diff --git a/VRage.Audio/VRage/Audio/MyXAudio2.cs b/VRage.Audio/VRage/Audio/MyXAudio2.cs
+index c276f2fc..a6eb508f 100644
+--- a/VRage.Audio/VRage/Audio/MyXAudio2.cs
++++ b/VRage.Audio/VRage/Audio/MyXAudio2.cs
+@@ -766,7 +766,7 @@ public class MyXAudio2 : IMyAudio
+ 			}
+ 			else
+ 			{
+-				m_x3dAudio = new X3DAudio(m_channelMask, X3DAudioVersion.Version29);
++				m_x3dAudio = new X3DAudio(m_channelMask, X3DAudioVersion.Default);
+ 			}
+ 			int num = text.IndexOf('\0');
+ 			if (num != -1)
+diff --git a/VRage.EOS/VRage/EOS/MyEOSLobbyList.cs b/VRage.EOS/VRage/EOS/MyEOSLobbyList.cs
+index a3d96623..b514b9fa 100644
+--- a/VRage.EOS/VRage/EOS/MyEOSLobbyList.cs
++++ b/VRage.EOS/VRage/EOS/MyEOSLobbyList.cs
+@@ -431,21 +431,23 @@ internal class MyEOSLobbyList<T> where T : class
+ 		}
+ 		void OnResults(Result result, (string ConnectingString, T Item)[] servers)
+ 		{
+-			if (result != Result.Success)
+-			{
+-				((_003C_003Ec__DisplayClass32_0)this)._003C_003E4__this.m_networking.Error($"Lobby search was not successful: {result}");
+-			}
+-			for (int i = 0; i < servers.Length; i++)
+-			{
+-				if (((_003C_003Ec__DisplayClass32_0)this)._003C_003E4__this.m_networking.VerboseLogging)
+-				{
+-					((_003C_003Ec__DisplayClass32_0)this)._003C_003E4__this.Log("Server [" + servers[i].ConnectingString + "]: " + ((servers[i].Item == null) ? "Not Available" : "Loaded") + ".");
+-				}
+-				if (servers[i].Item != null)
+-				{
+-					((_003C_003Ec__DisplayClass32_0)this).lobbyList.Add(servers[i].Item);
+-				}
+-			}
++            // Disabled due to compile errors
++            //
++			// if (result != Result.Success)
++			// {
++			// 	((_003C_003Ec__DisplayClass32_0)this)._003C_003E4__this.m_networking.Error($"Lobby search was not successful: {result}");
++			// }
++			// for (int i = 0; i < servers.Length; i++)
++			// {
++			// 	if (((_003C_003Ec__DisplayClass32_0)this)._003C_003E4__this.m_networking.VerboseLogging)
++			// 	{
++			// 		((_003C_003Ec__DisplayClass32_0)this)._003C_003E4__this.Log("Server [" + servers[i].ConnectingString + "]: " + ((servers[i].Item == null) ? "Not Available" : "Loaded") + ".");
++			// 	}
++			// 	if (servers[i].Item != null)
++			// 	{
++			// 		((_003C_003Ec__DisplayClass32_0)this).lobbyList.Add(servers[i].Item);
++			// 	}
++			// }
+ 			Deliver();
+ 		}
+ 	}
+diff --git a/VRage.Game/VRage/ObjectBuilders/Private/MyObjectBuilderSerializerKeen.cs b/VRage.Game/VRage/ObjectBuilders/Private/MyObjectBuilderSerializerKeen.cs
+index 5ee612d5..70732dd7 100644
+--- a/VRage.Game/VRage/ObjectBuilders/Private/MyObjectBuilderSerializerKeen.cs
++++ b/VRage.Game/VRage/ObjectBuilders/Private/MyObjectBuilderSerializerKeen.cs
+@@ -37,7 +37,11 @@ public class MyObjectBuilderSerializerKeen
+ 
+ 	static MyObjectBuilderSerializerKeen()
+ 	{
++#if THIS_CAUSED_CRASHES
++		// Crashed inside protobuf-net code inside calls to MyObjectBuilderSerializerKeen.Clone
+ 		ENABLE_PROTOBUFFERS_CLONING = true;
++#endif
++
+ 		Dynamic = new MySerializeInfo(MyObjectFlags.Dynamic, MyPrimitiveFlags.None, 0, SerializeDynamic, null, null);
+ 		m_typeModel = MyVRage.Platform?.GetTypeModel();
+ 		Serializer = m_typeModel?.Model;
+diff --git a/VRage.NativeAftermath/NativeAftermath/MyAfterMath.cs b/VRage.NativeAftermath/NativeAftermath/MyAfterMath.cs
+index cb30d6ec..a3344c3b 100644
+--- a/VRage.NativeAftermath/NativeAftermath/MyAfterMath.cs
++++ b/VRage.NativeAftermath/NativeAftermath/MyAfterMath.cs
+@@ -33,7 +33,8 @@ public class MyAfterMath
+ 		if (m_initialized)
+ 		{
+ 			IntPtr value = default(IntPtr);
+-			System.Runtime.CompilerServices.Unsafe.SkipInit(out GFSDK_Aftermath_ContextHandle__* ptr);
++			System.Runtime.CompilerServices.Unsafe.SkipInit(out IntPtr tmpPtr);
++			GFSDK_Aftermath_ContextHandle__* ptr = (GFSDK_Aftermath_ContextHandle__*)tmpPtr;
+ 			if (!m_markerTable.TryGetValue(marker, out value))
+ 			{
+ 				IntPtr intPtr = Marshal.StringToHGlobalAnsi(marker);
+diff --git a/VRage.Platform.Windows/VRage/Platform/Windows/Audio/MyPlatformAudio.cs b/VRage.Platform.Windows/VRage/Platform/Windows/Audio/MyPlatformAudio.cs
+index 102290de..2d8ed08a 100644
+--- a/VRage.Platform.Windows/VRage/Platform/Windows/Audio/MyPlatformAudio.cs
++++ b/VRage.Platform.Windows/VRage/Platform/Windows/Audio/MyPlatformAudio.cs
+@@ -12,7 +12,7 @@ internal class MyPlatformAudio : IMyPlatformAudio
+ 
+ 	public XAudio2 InitAudioEngine()
+ 	{
+-		m_audioEngine = new XAudio2(XAudio2Version.Version29);
++		m_audioEngine = new XAudio2(XAudio2Version.Default);
+ 		return m_audioEngine;
+ 	}
+ 
+diff --git a/VRage.Platform.Windows/VRage/Platform/Windows/MyCrashReporting.cs b/VRage.Platform.Windows/VRage/Platform/Windows/MyCrashReporting.cs
+index 12aa79f4..d635d443 100644
+--- a/VRage.Platform.Windows/VRage/Platform/Windows/MyCrashReporting.cs
++++ b/VRage.Platform.Windows/VRage/Platform/Windows/MyCrashReporting.cs
+@@ -65,6 +65,8 @@ internal class MyCrashReporting : IMyCrashReporting
+ 
+ 	public void PrepareCrashAnalyticsReporting(string logPath, bool GDPRConsent, CrashInfo info, bool isUnsupportedGpu)
+ 	{
++// Crash reporting has been disabled
++#if DISABLED
+ 		string text = (isUnsupportedGpu ? "reporX" : "report");
+ 		ProcessStartInfo processStartInfo = new ProcessStartInfo();
+ 		processStartInfo.Arguments = "-" + text + " \"" + logPath + "\" \"" + info.GameName + "\" \"" + info.AppVersion + "\" \"" + info.AnalyticId + "\"";
+@@ -73,10 +75,13 @@ internal class MyCrashReporting : IMyCrashReporting
+ 		processStartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+ 		processStartInfo.RedirectStandardInput = true;
+ 		Process.Start(processStartInfo)?.StandardInput.Close();
++#endif
+ 	}
+ 
+ 	public bool ExtractCrashAnalyticsReport(string[] args, out string logPath, out CrashInfo info, out bool isUnsupportedGpu, out bool exitAfterReport)
+ 	{
++// Crash reporting has been disabled
++#if DISABLED
+ 		exitAfterReport = true;
+ 		for (int i = 0; i < 2; i++)
+ 		{
+@@ -100,6 +105,7 @@ internal class MyCrashReporting : IMyCrashReporting
+ 			}
+ 			return true;
+ 		}
++#endif
+ 		logPath = null;
+ 		info = default(CrashInfo);
+ 		isUnsupportedGpu = false;
+diff --git a/VRage.Platform.Windows/VRage/Platform/Windows/Serialization/DynamicTypeModel.cs b/VRage.Platform.Windows/VRage/Platform/Windows/Serialization/DynamicTypeModel.cs
+index e9c3c566..35b9e4e0 100644
+--- a/VRage.Platform.Windows/VRage/Platform/Windows/Serialization/DynamicTypeModel.cs
++++ b/VRage.Platform.Windows/VRage/Platform/Windows/Serialization/DynamicTypeModel.cs
+@@ -20,7 +20,7 @@ internal class DynamicTypeModel : IProtoTypeModel
+ 
+ 	private void CreateTypeModel()
+ 	{
+-		m_typeModel = RuntimeTypeModel.Create(setDefault: true);
++		m_typeModel = RuntimeTypeModel.Create();
+ 		m_typeModel.AutoAddMissingTypes = true;
+ 		m_typeModel.UseImplicitZeroDefaults = false;
+ 	}
+diff --git a/VRage.Platform.Windows/VRage/Platform/Windows/Sys/MyWindowsSystem.cs b/VRage.Platform.Windows/VRage/Platform/Windows/Sys/MyWindowsSystem.cs
+index e5a5e0c6..a46d9851 100644
+--- a/VRage.Platform.Windows/VRage/Platform/Windows/Sys/MyWindowsSystem.cs
++++ b/VRage.Platform.Windows/VRage/Platform/Windows/Sys/MyWindowsSystem.cs
+@@ -223,6 +223,10 @@ internal sealed class MyWindowsSystem : IVRageSystem
+ 
+ 	public string GetOsName()
+ 	{
++		// Disabled due to:
++		// System.Runtime.InteropServices.MarshalDirectiveException: Cannot marshal 'parameter #3': Cannot marshal a string by-value with the [Out] attribute.
++		return "Windows";
++
+ 		string text = "";
+ 		try
+ 		{
+@@ -239,6 +243,7 @@ internal sealed class MyWindowsSystem : IVRageSystem
+ 	{
+ 		if (m_cpuInfo.Name == null)
+ 		{
++#if DISABLED_DO_NOT_WORK
+ 			try
+ 			{
+ 				using ManagementObjectSearcher managementObjectSearcher = new ManagementObjectSearcher("select Name, MaxClockSpeed, NumberOfCores from Win32_Processor");
+@@ -256,6 +261,10 @@ internal sealed class MyWindowsSystem : IVRageSystem
+ 				m_cpuInfo.Cores = 0u;
+ 				m_cpuInfo.MaxClock = 0u;
+ 			}
++#endif
++			m_cpuInfo.Cores = (uint)Environment.ProcessorCount;
++			m_cpuInfo.Name = $"Generic with {m_cpuInfo.Cores} cores";
++			m_cpuInfo.MaxClock = 3600u;
+ 		}
+ 		frequency = m_cpuInfo.MaxClock;
+ 		physicalCores = m_cpuInfo.Cores;
+@@ -281,6 +290,9 @@ internal sealed class MyWindowsSystem : IVRageSystem
+ 
+ 	public void LogEnvironmentInformation()
+ 	{
++		// Prevent crash due to broken C API binding
++		return;
++
+ 		m_log.WriteLine("MyVideoModeManager.LogEnvironmentInformation - START");
+ 		m_log.IncreaseIndent();
+ 		try
+diff --git a/VRage.Render/VRage/Render/Image/MyImage.cs b/VRage.Render/VRage/Render/Image/MyImage.cs
+index 96899d5b..a14a7d06 100644
+--- a/VRage.Render/VRage/Render/Image/MyImage.cs
++++ b/VRage.Render/VRage/Render/Image/MyImage.cs
+@@ -29,11 +29,11 @@ public static class MyImage
+ 
+ 	public static IMyImage Load(Stream stream, bool oneChannel, bool headerOnly = false, string debugName = null)
+ 	{
+-		IImageInfo imageInfo = SixLabors.ImageSharp.Image.Identify(stream);
++		var imageInfo = SixLabors.ImageSharp.Image.Identify(stream);
+ 		stream.Position = 0L;
+ 		if (!oneChannel)
+ 		{
+-			oneChannel = imageInfo.MetaData.GetFormatMetaData(PngFormat.Instance).ColorType == PngColorType.Grayscale;
++			oneChannel = imageInfo.Metadata.GetPngMetadata().ColorType == PngColorType.Grayscale;
+ 		}
+ 		if (headerOnly)
+ 		{
+@@ -44,9 +44,9 @@ public static class MyImage
+ 			switch ((PngBitDepth)(byte)imageInfo.PixelType.BitsPerPixel)
+ 			{
+ 			case PngBitDepth.Bit8:
+-				return MyImage<byte>.Create<Gray8>(imageInfo);
++				return MyImage<byte>.Create<L8>(imageInfo);
+ 			case PngBitDepth.Bit16:
+-				return MyImage<ushort>.Create<Gray16>(imageInfo);
++				return MyImage<ushort>.Create<L16>(imageInfo);
+ 			}
+ 		}
+ 		else if (oneChannel)
+@@ -54,24 +54,24 @@ public static class MyImage
+ 			switch ((PngBitDepth)(byte)imageInfo.PixelType.BitsPerPixel)
+ 			{
+ 			case PngBitDepth.Bit8:
+-				return MyImage<byte>.Create<Gray8>(stream);
++				return MyImage<byte>.Create<L8>(stream);
+ 			case PngBitDepth.Bit16:
+-				return MyImage<ushort>.Create<Gray16>(stream);
++				return MyImage<ushort>.Create<L16>(stream);
+ 			}
+ 		}
+ 		else
+ 		{
+-			PngMetaData formatMetaData = imageInfo.MetaData.GetFormatMetaData(PngFormat.Instance);
+-			if (formatMetaData.ColorType != PngColorType.Grayscale)
++			var formatMetaData = imageInfo.Metadata.GetPngMetadata();
++			if (formatMetaData.ColorType != 0)
+ 			{
+ 				return MyImage<uint>.Create<Rgba32>(stream);
+ 			}
+ 			switch (formatMetaData.BitDepth)
+ 			{
+ 			case PngBitDepth.Bit8:
+-				return MyImage<byte>.Create<Gray8>(stream);
++				return MyImage<byte>.Create<L8>(stream);
+ 			case PngBitDepth.Bit16:
+-				return MyImage<ushort>.Create<Gray16>(stream);
++				return MyImage<ushort>.Create<L16>(stream);
+ 			}
+ 		}
+ 		return null;
+@@ -143,7 +143,7 @@ public class MyImage<TData> : IMyImage<TData>, IMyImage where TData : unmanaged
+ 	public static MyImage<TData> Create<TImage>(Stream stream) where TImage : struct, IPixel<TImage>
+ 	{
+ 		using Image<TImage> image = SixLabors.ImageSharp.Image.Load<TImage>(stream);
+-		TData[] data = MemoryMarshal.Cast<TImage, TData>(image.GetPixelSpan()).ToArray();
++		TData[] data = MemoryMarshal.Cast<TImage, TData>(image.GetPixelMemoryGroup().Single().Span).ToArray();
+ 		return new MyImage<TData>
+ 		{
+ 			Size = new Vector2I(image.Width, image.Height),
+diff --git a/VRage.Render11/VRage/Render11/Resources/MyFileTextureImageCache.cs b/VRage.Render11/VRage/Render11/Resources/MyFileTextureImageCache.cs
+index 02da7d8a..deff0459 100644
+--- a/VRage.Render11/VRage/Render11/Resources/MyFileTextureImageCache.cs
++++ b/VRage.Render11/VRage/Render11/Resources/MyFileTextureImageCache.cs
+@@ -112,6 +112,15 @@ internal class MyFileTextureImageCache
+ 	{
+ 		try
+ 		{
++			if (filepath.ToLower().EndsWith(".zip"))
++			{
++				filepath = filepath.Substring(0, filepath.Length - 4) + ".dds";
++				if (!File.Exists(filepath))
++				{
++					throw new Exception($"DDS file extracted from ZIP is missing: {filepath}");
++				}
++			}
++
+ 			using Stream stream = MyFileSystem.OpenRead(filepath);
+ 			if (stream == null)
+ 			{
+diff --git a/VRage.Render11/VRageRender/MyTextureData.cs b/VRage.Render11/VRageRender/MyTextureData.cs
+index d0583e86..006195b3 100644
+--- a/VRage.Render11/VRageRender/MyTextureData.cs
++++ b/VRage.Render11/VRageRender/MyTextureData.cs
+@@ -146,7 +146,7 @@ internal class MyTextureData : MyImmediateRC
+ 		case Format.R16_UInt:
+ 		case Format.R16_SNorm:
+ 		case Format.R16_SInt:
+-			MyImage.Save<Gray16>(stream, fileFormat, dataPointer, srcPitch, size, 2u);
++			MyImage.Save<L16>(stream, fileFormat, dataPointer, srcPitch, size, 2u);
+ 			break;
+ 		case Format.B5G6R5_UNorm:
+ 			MyImage.Save<Bgr565>(stream, fileFormat, dataPointer, srcPitch, size, 2u);
+@@ -163,7 +163,7 @@ internal class MyTextureData : MyImmediateRC
+ 		case Format.R8_SNorm:
+ 		case Format.R8_SInt:
+ 		case Format.A8_UNorm:
+-			MyImage.Save<Gray8>(stream, fileFormat, dataPointer, srcPitch, size, 1u);
++			MyImage.Save<L8>(stream, fileFormat, dataPointer, srcPitch, size, 1u);
+ 			break;
+ 		}
+ 	}
+diff --git a/VRage.Scripting/VRage/Scripting/Rewriters/PerfCountingRewriter.cs b/VRage.Scripting/VRage/Scripting/Rewriters/PerfCountingRewriter.cs
+index 8b559bb4..9e08dcc3 100644
+--- a/VRage.Scripting/VRage/Scripting/Rewriters/PerfCountingRewriter.cs
++++ b/VRage.Scripting/VRage/Scripting/Rewriters/PerfCountingRewriter.cs
+@@ -300,6 +300,10 @@ internal class PerfCountingRewriter : CSharpSyntaxRewriter
+ 
+ 	public static SyntaxTree Rewrite(CSharpCompilation compilation, SyntaxTree syntaxTree, int modId)
+ 	{
++		// Disabled performance counting, otherwise mod compilation fails with repeated diagnostic error messages:
++		// The type or namespace name 'CompilerMethods' does not exist in the namespace 'VRage.Scripting' (are you missing an assembly reference?)
++		return syntaxTree;
++
+ 		SyntaxNode root = new PerfCountingRewriter(compilation, syntaxTree, modId).Visit(syntaxTree.GetRoot());
+ 		return syntaxTree.WithRootAndOptions(root, syntaxTree.Options);
+ 	}
+diff --git a/VRage/VRage/CustomRootWriter.cs b/VRage/VRage/CustomRootWriter.cs
+index 614a0e96..2140d607 100644
+--- a/VRage/VRage/CustomRootWriter.cs
++++ b/VRage/VRage/CustomRootWriter.cs
+@@ -24,11 +24,14 @@ public class CustomRootWriter : XmlWriter
+ 
+ 	public override WriteState WriteState => m_target.WriteState;
+ 
++	public const string XSD_NS_URL = "http://www.w3.org/2001/XMLSchema";
++	public const string XSI_NS_URL = "http://www.w3.org/2001/XMLSchema-instance";
++
+ 	internal void Init(string customRootType, XmlWriter target)
+ 	{
+ 		m_target = target;
+ 		m_customRootType = customRootType;
+-		m_target.WriteAttributeString("xsi:type", m_customRootType);
++		m_target.WriteAttributeString("xsi", "type", XSI_NS_URL, m_customRootType);
+ 		m_currentDepth = 0;
+ 	}
+ 
+diff --git a/VRage/VRage/GameServices/MyInventoryHelper.cs b/VRage/VRage/GameServices/MyInventoryHelper.cs
+index 43c984b9..0a1c0b73 100644
+--- a/VRage/VRage/GameServices/MyInventoryHelper.cs
++++ b/VRage/VRage/GameServices/MyInventoryHelper.cs
+@@ -1,3 +1,6 @@
++// See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
++#pragma warning disable SYSLIB0011
++
+ using System.Collections.Generic;
+ using System.IO;
+ using System.Runtime.Serialization.Formatters.Binary;
+@@ -32,3 +35,5 @@ public static class MyInventoryHelper
+ 		return memoryStream.ToArray();
+ 	}
+ }
++
++#pragma warning restore SYSLIB0011
+diff --git a/VRage/VRage/MyAbstractXmlSerializer.cs b/VRage/VRage/MyAbstractXmlSerializer.cs
+index 6844e077..cbd087d3 100644
+--- a/VRage/VRage/MyAbstractXmlSerializer.cs
++++ b/VRage/VRage/MyAbstractXmlSerializer.cs
+@@ -39,7 +39,7 @@ public class MyAbstractXmlSerializer<TAbstractBase> : MyXmlSerializerBase<TAbstr
+ 
+ 	protected virtual string GetTypeAttribute(XmlReader reader)
+ 	{
+-		return reader.GetAttribute("xsi:type");
++		return reader.GetAttribute("type", CustomRootWriter.XSI_NS_URL);
+ 	}
+ 
+ 	public static implicit operator MyAbstractXmlSerializer<TAbstractBase>(TAbstractBase builder)
+diff --git a/VRage/VRage/Network/MyTypeTable.cs b/VRage/VRage/Network/MyTypeTable.cs
+index 47605956..42f0965f 100644
+--- a/VRage/VRage/Network/MyTypeTable.cs
++++ b/VRage/VRage/Network/MyTypeTable.cs
+@@ -89,6 +89,11 @@ public class MyTypeTable
+ 	{
+ 		if ((!type.HasAttribute<SerializableAttribute>() || type.HasAttribute<CompilerGeneratedAttribute>()) && !type.IsEnum)
+ 		{
++			// Compatibility with the original server,
++			// these two items are present in the type table on .NET Framework 4.8
++			if (type.FullName == "System.Delegate" || type.FullName == "System.MulticastDelegate")
++				return true;
++
+ 			return typeof(MulticastDelegate).IsAssignableFrom(type.BaseType);
+ 		}
+ 		return true;
+@@ -145,22 +150,38 @@ public class MyTypeTable
+ 			}
+ 			return;
+ 		}
++
+ 		int num = (int)stream.ReadUInt32Variant();
+ 		if (m_idToType.Count != num)
+ 		{
+-			MyLog.Default.WriteLine($"Bad number of types from server. Recieved {num}, have {m_idToType.Count}");
++			// This is a fatal error condition, because of m_idToType[j] in the logic below
++			throw new Exception($"Bad number of types from server. Receieved {num}, have {m_idToType.Count}");
++		}
++
++		for (var i = 0; i < num; i++)
++		{
++			m_idToType[i] = null;
+ 		}
++
+ 		m_staticEventTable = new MyEventTable(null);
+ 		for (int j = 0; j < num; j++)
+ 		{
+ 			int num2 = stream.ReadInt32();
+ 			if (!m_hashLookup.ContainsKey(num2))
+ 			{
+-				MyLog.Default.WriteLine("Type hash not found! Value: " + num2);
++				throw new Exception("Type hash not found! Value: " + num2);
+ 			}
+ 			MySynchronizedTypeInfo mySynchronizedTypeInfo = m_hashLookup[num2];
+ 			m_idToType[j] = mySynchronizedTypeInfo;
+ 			m_staticEventTable.AddStaticEvents(mySynchronizedTypeInfo.Type);
+ 		}
++
++		for (var i = 0; i < num; i++)
++		{
++			if (m_idToType[i] == null)
++			{
++				throw new Exception($"Type ID {i} is missing after the reordering based on server response");
++			}
++		}
+ 	}
+ }
+diff --git a/VRage/VRage/Voxels/MyStorageData.cs b/VRage/VRage/Voxels/MyStorageData.cs
+index a6911381..724b5ab3 100644
+--- a/VRage/VRage/Voxels/MyStorageData.cs
++++ b/VRage/VRage/Voxels/MyStorageData.cs
+@@ -1,3 +1,6 @@
++// See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
++#pragma warning disable SYSLIB0011
++
+ using System;
+ using System.Collections;
+ using System.Collections.Generic;
+@@ -654,3 +657,5 @@ public class MyStorageData
+ 		return (MyStorageData)new BinaryFormatter().Deserialize(serializationStream);
+ 	}
+ }
++
++#pragma warning restore SYSLIB0011
