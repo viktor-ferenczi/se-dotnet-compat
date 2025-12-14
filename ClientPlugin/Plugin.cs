@@ -16,7 +16,7 @@ namespace ClientPlugin;
 // ReSharper disable once UnusedType.Global
 public class Plugin : IPlugin
 {
-    public const string Name = "ClientPluginTemplate";
+    public const string Name = "DotNetCompat";
     public static Plugin Instance { get; private set; }
     private SettingsGenerator settingsGenerator;
 

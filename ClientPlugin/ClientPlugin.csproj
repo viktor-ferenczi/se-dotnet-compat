@@ -3,7 +3,7 @@
     <TargetFramework>net48</TargetFramework>
     <OutputType>Library</OutputType>
     <RootNamespace>ClientPlugin</RootNamespace>
-    <AssemblyName>ClientPluginTemplate</AssemblyName>
+    <AssemblyName>DotNetCompat</AssemblyName>
     <LangVersion>13</LangVersion>
 
     <!-- Ensure SDK generates assembly attributes (no need for AssemblyInfo) -->
