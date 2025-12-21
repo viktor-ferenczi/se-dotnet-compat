@@ -41,6 +41,7 @@ public static class Preloader
         
 #if SIXLABORS_FIXES
         MyImagePrepatch.Prepatch(asmDef);
+        MyTextureDataPrepatch.Prepatch(asmDef);
 #endif
 
 #if NULLABILITY_FIXES
@@ -49,10 +50,6 @@ public static class Preloader
         
 #if XML_FIXES
         XmlSerializationPrepatch.Prepatch(asmDef);
-#endif
-        
-#if PROTOBUF_FIXES
-        MyObjectBuilderSerializerKeenPrepatch.Prepatch(asmDef);
 #endif
     }
     

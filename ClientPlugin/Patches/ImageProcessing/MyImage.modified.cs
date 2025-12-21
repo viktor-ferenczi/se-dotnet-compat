@@ -15,7 +15,6 @@ using VRageMath;
 
 namespace ClientPlugin.Patches.ImageProcessing;
 
-// Replacement
 // ReSharper disable once UnusedType.Global
 public static class MyImage
 {
@@ -33,7 +32,7 @@ public static class MyImage
 
 	public static IMyImage Load(Stream stream, bool oneChannel, bool headerOnly = false, string debugName = null)
 	{
-		var imageInfo = SixLabors.ImageSharp.Image.Identify(stream);
+		ImageInfo imageInfo = SixLabors.ImageSharp.Image.Identify(stream);
 		stream.Position = 0L;
 		if (!oneChannel)
 		{
