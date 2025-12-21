@@ -1,7 +1,7 @@
-// 229008e8
+// c5f21c05
 ldarg.0
-ldc.i4.1
-call static ProtoBuf.Meta.RuntimeTypeModel ProtoBuf.Meta.RuntimeTypeModel::Create(System.Boolean setDefault)
+ldnull
+call static ProtoBuf.Meta.RuntimeTypeModel ProtoBuf.Meta.RuntimeTypeModel::Create(System.String name)
 stfld ProtoBuf.Meta.RuntimeTypeModel VRage.Platform.Windows.Serialization.DynamicTypeModel::m_typeModel
 ldarg.0
 ldfld ProtoBuf.Meta.RuntimeTypeModel VRage.Platform.Windows.Serialization.DynamicTypeModel::m_typeModel

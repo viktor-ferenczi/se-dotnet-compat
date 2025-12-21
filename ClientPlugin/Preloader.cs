@@ -14,6 +14,7 @@ using System.IO;
 using ClientPlugin;
 using ClientPlugin.Patches.ImageProcessing;
 using ClientPlugin.Patches.NullSafety;
+using ClientPlugin.Patches.ProtoBuf;
 using ClientPlugin.Patches.Serialization;
 using Mono.Cecil;
 
@@ -24,6 +25,7 @@ public static class Preloader
     public static IEnumerable<string> TargetDLLs { get; } = [
         "Sandbox.Game.dll",
         "VRage.dll",
+        "VRage.Game.dll",
         "VRage.Render.dll",
     ];
 
@@ -49,6 +51,10 @@ public static class Preloader
 #if XML_FIXES
         XmlSerializationPrepatch.Prepatch(asmDef);
 #endif
+        
+#if PROTOBUF_FIXES
+        MyObjectBuilderSerializerKeenPrepatch.Prepatch(asmDef);
+#endif
     }
     
     // ReSharper disable once UnusedMember.Global
@@ -64,7 +70,14 @@ public static class Preloader
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             var dll_path = path.Replace(@"C:\Users\viktor", home);
             Debug.Assert(File.Exists(dll_path), $"Missing assembly file: {dll_path}");
-            Assembly.LoadFrom(dll_path);
+            try
+            {
+                Assembly.LoadFrom(dll_path);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Assembly already loaded: {dll_path}; {e.Message}");
+            }
         }
 
         AppDomain.CurrentDomain.AssemblyResolve += GameAssemblyResolver(@"C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64");
@@ -90,10 +103,8 @@ public static class Preloader
         assemblyOverrides["Microsoft.CodeAnalysis"] = @"C:\Users\viktor\.nuget\packages\microsoft.codeanalysis.common\4.11.0\lib\netstandard2.0\Microsoft.CodeAnalysis.dll";
         assemblyOverrides["Microsoft.CodeAnalysis.CSharp"] = @"C:\Users\viktor\.nuget\packages\microsoft.codeanalysis.csharp\4.11.0\lib\netstandard2.0\Microsoft.CodeAnalysis.CSharp.dll";
         // assemblyOverrides["Newtonsoft.Json"] = @"C:\Users\viktor\.nuget\packages\newtonsoft.json\13.0.3\lib\netstandard2.0\Newtonsoft.Json.dll";
-        // assemblyOverrides["ProtoBuf.Net"] = @"C:\Users\viktor\.nuget\packages\protobuf-net\3.0.131\lib\netstandard2.1\protobuf-net.dll";
-        // assemblyOverrides["ProtoBuf.Net.Core"] = @"C:\Users\viktor\.nuget\packages\protobuf-net.core\3.0.131\lib\netstandard2.1\protobuf-net.Core.dll";
-        // assemblyOverrides["protobuf-net"] = @"C:\Users\viktor\.nuget\packages\protobuf-net\3.0.131\lib\netstandard2.1\protobuf-net.dll";
-        // assemblyOverrides["protobuf-net.Core"] = @"C:\Users\viktor\.nuget\packages\protobuf-net.core\3.0.131\lib\netstandard2.1\protobuf-net.Core.dll";
+        assemblyOverrides["ProtoBuf.Net"] = @"C:\Users\viktor\.nuget\packages\protobuf-net\2.4.9\lib\netstandard2.0\protobuf-net.dll";
+        assemblyOverrides["ProtoBuf.Net.Core"] = @"C:\Users\viktor\.nuget\packages\protobuf-net.Core\2.4.9\lib\netstandard2.0\protobuf-net.Core.dll";
         assemblyOverrides["RestSharp"] = @"C:\Users\viktor\.nuget\packages\restsharp\106.6.10\lib\netstandard2.0\RestSharp.dll";
         // assemblyOverrides["SharpDX"] = @"C:\Users\viktor\.nuget\packages\sharpdx\4.2.0\lib\uap10.0\SharpDX.dll";
         // assemblyOverrides["SharpDX.D3DCompiler"] = @"C:\Users\viktor\.nuget\packages\sharpdx.d3dcompiler\4.2.0\lib\uap10.0\SharpDX.D3DCompiler.dll";
