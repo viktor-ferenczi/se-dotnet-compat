@@ -12,7 +12,7 @@ public static class MyTextureDataPrepatch
             return;
         
         // MyTextureData calls MyImage.Save with a SixLabors PixelFormat generic parameter
-        // TODO: Implement patching of the VRageRender.MyTextureData class and its methods to match the code changes you can find in the MyTextureData.original.cs to the MyTextureData.modified.cs file.
+        // TODO: Implement patching of the VRageRender.MyTextureData class and its methods to match the code changes you can find in the MyTextureData.original.cs (IL code: MyTextureData.original.il) to the MyTextureData.modified.cs file.
     }
 }
 
