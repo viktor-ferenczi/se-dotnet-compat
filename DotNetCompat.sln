@@ -11,8 +11,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		AGENTS.md = AGENTS.md
 		.github\copilot-instructions.md = .github\copilot-instructions.md
 		DotNetCompat.xml = DotNetCompat.xml
-		ChangesForPulsar.patch = ChangesForPulsar.patch
-		generate_overridden_assemblies.py = generate_overridden_assemblies.py
 	EndProjectSection
 EndProject
 Global
