@@ -32,13 +32,13 @@ ldc.i4.s 16
 beq.s IL_0051
 br.s IL_00c8
 ldloc.0
-call VRage.Render.Image.MyImage<TData> VRage.Render.Image.MyImage<System.Byte>::Create<SixLabors.ImageSharp.PixelFormats.L8>(SixLabors.ImageSharp.IImageInfo)
+call VRage.Render.Image.MyImage<TData> VRage.Render.Image.MyImage<System.Byte>::Create<SixLabors.ImageSharp.PixelFormats.L8>(SixLabors.ImageSharp.ImageInfo)
 ret
 ldloc.0
-call VRage.Render.Image.MyImage<TData> VRage.Render.Image.MyImage<System.UInt16>::Create<SixLabors.ImageSharp.PixelFormats.L16>(SixLabors.ImageSharp.IImageInfo)
+call VRage.Render.Image.MyImage<TData> VRage.Render.Image.MyImage<System.UInt16>::Create<SixLabors.ImageSharp.PixelFormats.L16>(SixLabors.ImageSharp.ImageInfo)
 ret
 ldloc.0
-call VRage.Render.Image.MyImage<TData> VRage.Render.Image.MyImage<System.UInt32>::Create<SixLabors.ImageSharp.PixelFormats.Rgba32>(SixLabors.ImageSharp.IImageInfo)
+call VRage.Render.Image.MyImage<TData> VRage.Render.Image.MyImage<System.UInt32>::Create<SixLabors.ImageSharp.PixelFormats.Rgba32>(SixLabors.ImageSharp.ImageInfo)
 ret
 ldarg.1
 brfalse.s IL_0088
