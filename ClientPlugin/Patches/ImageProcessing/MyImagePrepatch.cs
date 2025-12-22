@@ -1,6 +1,9 @@
 #if SIXLABORS_FIXES
 
+using System.Diagnostics;
+using System.Linq;
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 
 namespace ClientPlugin.Patches.ImageProcessing;
 
@@ -11,8 +14,213 @@ public static class MyImagePrepatch
         if (asmDef.Name.Name != "VRage.Render")
             return;
         
-        // Follow SixLabors API change
-        // TODO: Implement patching of the VRage.Render.Image.MyImage class and its methods to match the code changes you can find in the MyImage.original.cs (IL code: MyImage.original.il) to the MyImage.modified.cs file.
+        var module = asmDef.MainModule;
+        
+        // Patch the static MyImage class
+        var myImageType = module.GetType("VRage.Render.Image.MyImage");
+        PatchMyImageLoad(module, myImageType);
+        
+        // Patch the generic MyImage<TData> class
+        var myImageGenericType = module.GetTypes().First(t => t.FullName.StartsWith("VRage.Render.Image.MyImage`1"));
+        PatchMyImageGenericCreateStream(module, myImageGenericType);
+    }
+
+    private static void PatchMyImageLoad(ModuleDefinition module, TypeDefinition type)
+    {
+        // Find the Load(Stream, bool, bool, string) method
+        var method = type.Methods.First(m =>
+            m.Name == "Load" &&
+            m.Parameters.Count == 4 &&
+            m.Parameters[0].ParameterType.Name == "Stream");
+        
+        var il = method.Body.Instructions;
+        
+        // Patch all Gray8 -> L8 and Gray16 -> L16 references in method call operands
+        // These are calls to MyImage<TData>.Create<TPixel> with various pixel format type arguments
+        for (var i = 0; i < il.Count; i++)
+        {
+            var instr = il[i];
+            if (instr.OpCode != OpCodes.Call || instr.Operand is not MethodReference methodRef)
+                continue;
+            
+            // Check if this is a Create method with a generic pixel format argument
+            if (methodRef.Name != "Create" || methodRef is not GenericInstanceMethod genericMethod)
+                continue;
+            
+            // Check the generic argument for Gray8 or Gray16
+            for (var j = 0; j < genericMethod.GenericArguments.Count; j++)
+            {
+                var genArg = genericMethod.GenericArguments[j];
+                
+                if (genArg.Name == "Gray8")
+                {
+                    // Replace with L8
+                    var l8Type = new TypeReference("SixLabors.ImageSharp.PixelFormats", "L8", module, 
+                        module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), true);
+                    genericMethod.GenericArguments[j] = l8Type;
+                }
+                else if (genArg.Name == "Gray16")
+                {
+                    // Replace with L16
+                    var l16Type = new TypeReference("SixLabors.ImageSharp.PixelFormats", "L16", module, 
+                        module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), true);
+                    genericMethod.GenericArguments[j] = l16Type;
+                }
+            }
+        }
+        
+        // Patch GetFormatMetaData<PngMetaData>(PngFormat.Instance) -> GetPngMetadata()
+        // And MetaData -> Metadata property access
+        for (var i = il.Count - 1; i >= 0; i--)
+        {
+            var instr = il[i];
+            
+            // Replace get_MetaData with get_Metadata (property name change)
+            if (instr.OpCode == OpCodes.Callvirt && instr.Operand is MethodReference propMethodRef)
+            {
+                if (propMethodRef.Name == "get_MetaData" && propMethodRef.DeclaringType.Name == "IImageInfo")
+                {
+                    // Need to change from IImageInfo.get_MetaData() to ImageInfo.get_Metadata()
+                    var imageInfoType = new TypeReference("SixLabors.ImageSharp", "ImageInfo", module,
+                        module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), true);
+                    var metadataType = new TypeReference("SixLabors.ImageSharp.Metadata", "ImageMetadata", module,
+                        module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), false);
+                    
+                    var getMetadataMethod = new MethodReference("get_Metadata", metadataType, imageInfoType) { HasThis = true };
+                    instr.Operand = getMetadataMethod;
+                }
+            }
+            
+            // Replace GetFormatMetaData<PngMetaData>(PngFormat) -> GetPngMetadata()
+            if (instr.OpCode == OpCodes.Callvirt && instr.Operand is MethodReference formatMethodRef)
+            {
+                if (formatMethodRef.Name == "GetFormatMetaData" && formatMethodRef is GenericInstanceMethod)
+                {
+                    // Find the preceding instruction that loads PngFormat.Instance and remove it
+                    Debug.Assert(i >= 1, "Expected preceding instruction for PngFormat.Instance");
+                    var prevInstr = il[i - 1];
+                    Debug.Assert(prevInstr.OpCode == OpCodes.Call, $"Expected Call OpCode at index {i-1}, got {prevInstr.OpCode}");
+                    Debug.Assert(prevInstr.Operand is MethodReference mr && mr.Name == "get_Instance" && mr.DeclaringType.Name == "PngFormat",
+                        "Expected call to PngFormat.get_Instance");
+                    
+                    // Remove the PngFormat.Instance call
+                    il.RemoveAt(i - 1);
+                    i--; // Adjust index after removal
+                    
+                    // Replace GetFormatMetaData with GetPngMetadata
+                    var imageMetadataType = new TypeReference("SixLabors.ImageSharp.Metadata", "ImageMetadata", module,
+                        module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), false);
+                    var pngMetadataType = new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngMetadata", module,
+                        module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), false);
+                    
+                    var getPngMetadataMethod = new MethodReference("GetPngMetadata", pngMetadataType, imageMetadataType) { HasThis = true };
+                    il[i].Operand = getPngMetadataMethod;
+                }
+            }
+        }
+    }
+    
+    private static void PatchMyImageGenericCreateStream(ModuleDefinition module, TypeDefinition type)
+    {
+        // Find the Create<TImage>(Stream) method
+        var method = type.Methods.First(m =>
+            m.Name == "Create" &&
+            m.Parameters.Count == 1 &&
+            m.Parameters[0].ParameterType.Name == "Stream");
+        
+        var il = method.Body.Instructions;
+        
+        // Find GetPixelSpan<TImage> call and replace with GetPixelMemoryGroup().Single().Span
+        // Original: call valuetype [System.Memory]System.Span`1<!!0> [SixLabors.ImageSharp]SixLabors.ImageSharp.Advanced.AdvancedImageExtensions::GetPixelSpan<!!TImage>(...)
+        for (var i = 0; i < il.Count; i++)
+        {
+            var instr = il[i];
+            if (instr.OpCode != OpCodes.Call || instr.Operand is not MethodReference methodRef)
+                continue;
+            
+            if (methodRef.Name != "GetPixelSpan")
+                continue;
+            
+            // Found GetPixelSpan call - need to replace with GetPixelMemoryGroup().Single().Span
+            
+            // Get the TImage generic parameter from the method
+            var tImageParam = method.GenericParameters[0];
+            
+            // Get required type references
+            var imageSharpRef = module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp");
+            var linqRef = module.AssemblyReferences.FirstOrDefault(r => r.Name == "System.Linq") 
+                          ?? new AssemblyNameReference("System.Linq", new global::System.Version(4, 0, 0, 0));
+            if (!module.AssemblyReferences.Contains(linqRef))
+                module.AssemblyReferences.Add(linqRef);
+            
+            // Memory<TImage> type
+            var memoryOpenType = new TypeReference("System", "Memory`1", module, 
+                module.AssemblyReferences.First(r => r.Name == "System.Memory"), true);
+            var memoryOfTImage = new GenericInstanceType(memoryOpenType);
+            memoryOfTImage.GenericArguments.Add(tImageParam);
+            
+            // IMemoryGroup<TImage> type
+            var memoryGroupInterfaceType = new TypeReference("SixLabors.ImageSharp.Memory", "IMemoryGroup`1", module, imageSharpRef, false);
+            var memoryGroupOfTImage = new GenericInstanceType(memoryGroupInterfaceType);
+            memoryGroupOfTImage.GenericArguments.Add(tImageParam);
+            
+            // Image<TImage> type for the extension method's first parameter
+            var imageOpenType = new TypeReference("SixLabors.ImageSharp", "Image`1", module, imageSharpRef, false);
+            var imageOfTImage = new GenericInstanceType(imageOpenType);
+            imageOfTImage.GenericArguments.Add(tImageParam);
+            
+            // GetPixelMemoryGroup<TImage>() method on ImageExtensions
+            var imageExtensionsType = new TypeReference("SixLabors.ImageSharp.Advanced", "AdvancedImageExtensions", module, imageSharpRef, false);
+            var getPixelMemoryGroupMethod = new MethodReference("GetPixelMemoryGroup", memoryGroupOfTImage, imageExtensionsType);
+            getPixelMemoryGroupMethod.Parameters.Add(new ParameterDefinition(imageOfTImage));
+            var getPixelMemoryGroupGeneric = new GenericInstanceMethod(getPixelMemoryGroupMethod);
+            getPixelMemoryGroupGeneric.GenericArguments.Add(tImageParam);
+            
+            // Single<Memory<TImage>>() LINQ extension method - returns Memory<TImage>
+            var enumerableType = new TypeReference("System.Linq", "Enumerable", module, linqRef, false);
+            var singleMethod = new MethodReference("Single", memoryOfTImage, enumerableType);
+            // IEnumerable<Memory<TImage>> parameter
+            var ienumerableOpenType = new TypeReference("System.Collections.Generic", "IEnumerable`1", module, 
+                module.AssemblyReferences.First(r => r.Name == "netstandard" || r.Name == "System.Runtime"), false);
+            var ienumerableOfMemory = new GenericInstanceType(ienumerableOpenType);
+            ienumerableOfMemory.GenericArguments.Add(memoryOfTImage);
+            singleMethod.Parameters.Add(new ParameterDefinition(ienumerableOfMemory));
+            var singleMethodGeneric = new GenericInstanceMethod(singleMethod);
+            singleMethodGeneric.GenericArguments.Add(memoryOfTImage);
+            
+            // Span<TImage> type
+            var spanOpenType = new TypeReference("System", "Span`1", module, 
+                module.AssemblyReferences.First(r => r.Name == "System.Memory"), true);
+            var spanOfTImage = new GenericInstanceType(spanOpenType);
+            spanOfTImage.GenericArguments.Add(tImageParam);
+            
+            // get_Span property on Memory<TImage>
+            var getSpanMethod = new MethodReference("get_Span", spanOfTImage, memoryOfTImage) { HasThis = true };
+            
+            // Replace the single GetPixelSpan call with three calls:
+            // 1. GetPixelMemoryGroup()
+            // 2. Single()
+            // 3. get_Span
+            
+            il[i].Operand = getPixelMemoryGroupGeneric;
+            
+            // Insert Single() call after GetPixelMemoryGroup
+            il.Insert(i + 1, Instruction.Create(OpCodes.Call, singleMethodGeneric));
+            
+            // Insert get_Span call (needs ldloca for value type)
+            // Actually, Single returns Memory<T> by value, so we need to store it, get address, then call get_Span
+            // Let's add a local variable for Memory<TImage>
+            var memoryLocal = new VariableDefinition(memoryOfTImage);
+            method.Body.Variables.Add(memoryLocal);
+            var localIndex = method.Body.Variables.Count - 1;
+            
+            // After Single(), store result in local, load address, call get_Span
+            il.Insert(i + 2, Instruction.Create(OpCodes.Stloc, memoryLocal));
+            il.Insert(i + 3, Instruction.Create(OpCodes.Ldloca, memoryLocal));
+            il.Insert(i + 4, Instruction.Create(OpCodes.Call, getSpanMethod));
+            
+            break; // Only one GetPixelSpan call in this method
+        }
     }
 }
 

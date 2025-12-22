@@ -26,6 +26,7 @@ public static class Preloader
         "VRage.dll",
         "VRage.Game.dll",
         "VRage.Render.dll",
+        "VRage.Render11.dll",
     ];
 
     // Assemblies to override with new versions
