@@ -60,7 +60,7 @@ public static class Preloader
     {
         Console.WriteLine($"{Plugin.Name}: Hook");
         
-        LoadAssemblyOverrides();
+        // LoadAssemblyOverrides();
 
         foreach (var path in assemblyOverrides.Values)
         {
@@ -77,7 +77,7 @@ public static class Preloader
             }
         }
 
-        AppDomain.CurrentDomain.AssemblyResolve += GameAssemblyResolver(@"C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64");
+        // AppDomain.CurrentDomain.AssemblyResolve += GameAssemblyResolver(@"C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64");
 
         // Enabling BinaryFormatter. This may not work on .Net 9
         // See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
