@@ -82,6 +82,55 @@ public static class MyImagePrepatch
             m.Parameters[0].ParameterType.Name == "Stream");
         
         var il = method.Body.Instructions;
+        var imageSharpRef = module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp");
+        
+        // Create ImageInfo type reference (value type/struct in new API)
+        var imageInfoType = new TypeReference("SixLabors.ImageSharp", "ImageInfo", module, imageSharpRef, true);
+        
+        // Patch local variable 0: IImageInfo -> ImageInfo
+        Debug.Assert(method.Body.Variables.Count > 0, "Expected at least one local variable");
+        Debug.Assert(method.Body.Variables[0].VariableType.Name == "IImageInfo", 
+            $"Expected local 0 to be IImageInfo, got {method.Body.Variables[0].VariableType.Name}");
+        method.Body.Variables[0].VariableType = imageInfoType;
+        
+        // Patch Image.Identify() return type and all IImageInfo interface calls
+        for (var i = 0; i < il.Count; i++)
+        {
+            var instr = il[i];
+            
+            // Patch Image.Identify() call - return type changes from IImageInfo to ImageInfo
+            if (instr.OpCode == OpCodes.Call && instr.Operand is MethodReference identifyRef)
+            {
+                if (identifyRef.Name == "Identify" && identifyRef.DeclaringType.Name == "Image")
+                {
+                    var imageType = new TypeReference("SixLabors.ImageSharp", "Image", module, imageSharpRef, false);
+                    var newIdentifyRef = new MethodReference("Identify", imageInfoType, imageType);
+                    newIdentifyRef.Parameters.Add(new ParameterDefinition(module.ImportReference(typeof(global::System.IO.Stream))));
+                    instr.Operand = newIdentifyRef;
+                }
+            }
+            
+            // Patch IImageInfo interface calls to use ImageInfo struct
+            if (instr.OpCode == OpCodes.Callvirt && instr.Operand is MethodReference interfaceMethodRef)
+            {
+                if (interfaceMethodRef.DeclaringType.Name == "IImageInfo")
+                {
+                    // Change get_PixelType, get_Width, get_Height to use ImageInfo
+                    var methodName = interfaceMethodRef.Name;
+                    var returnType = interfaceMethodRef.ReturnType;
+                    
+                    // For ImageInfo (struct), we need to use Call instead of Callvirt
+                    // But first we need stloc/ldloca to get the address
+                    if (methodName == "get_PixelType" || methodName == "get_Width" || methodName == "get_Height")
+                    {
+                        var newMethodRef = new MethodReference(methodName, returnType, imageInfoType) { HasThis = true };
+                        instr.Operand = newMethodRef;
+                        // Change from callvirt to call for value type
+                        instr.OpCode = OpCodes.Call;
+                    }
+                }
+            }
+        }
         
         // Patch all Gray8 -> L8 and Gray16 -> L16 references in method call operands
         // These are calls to MyImage<TData>.Create<TPixel> with various pixel format type arguments
@@ -129,8 +178,6 @@ public static class MyImagePrepatch
                 if (propMethodRef.Name == "get_MetaData" && propMethodRef.DeclaringType.Name == "IImageInfo")
                 {
                     // Need to change from IImageInfo.get_MetaData() to ImageInfo.get_Metadata()
-                    var imageInfoType = new TypeReference("SixLabors.ImageSharp", "ImageInfo", module,
-                        module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), true);
                     var metadataType = new TypeReference("SixLabors.ImageSharp.Metadata", "ImageMetadata", module,
                         module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), false);
                     
