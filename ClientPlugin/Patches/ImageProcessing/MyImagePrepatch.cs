@@ -189,6 +189,51 @@ public static class MyImagePrepatch
             }
         }
         
+        // Patch MyImage<T>.Create<TPixel>(IImageInfo) method parameter from IImageInfo to ImageInfo
+        // This is critical because ImageInfo is now a struct (value type) instead of an interface
+        for (var i = 0; i < il.Count; i++)
+        {
+            var instr = il[i];
+            if (instr.OpCode != OpCodes.Call || instr.Operand is not GenericInstanceMethod genericMethod)
+                continue;
+            
+            // Check if this is a Create method on MyImage<T>
+            if (genericMethod.Name != "Create" || !genericMethod.DeclaringType.Name.StartsWith("MyImage`1"))
+                continue;
+            
+            // Check if it has a parameter of type IImageInfo
+            if (genericMethod.Parameters.Count != 1)
+                continue;
+            
+            var paramType = genericMethod.Parameters[0].ParameterType;
+            if (paramType.Name != "IImageInfo")
+                continue;
+            
+            // Create new method reference with ImageInfo parameter instead of IImageInfo
+            var declaringType = genericMethod.DeclaringType;
+            var returnType = genericMethod.ReturnType;
+            
+            // Create the base method reference
+            var newMethodRef = new MethodReference("Create", returnType, declaringType);
+            newMethodRef.Parameters.Add(new ParameterDefinition(imageInfoType));
+            
+            // Copy generic parameters from the method (TPixel)
+            foreach (var genParam in genericMethod.GenericParameters)
+            {
+                newMethodRef.GenericParameters.Add(new GenericParameter(genParam.Name, newMethodRef));
+            }
+            
+            // Create the generic instance with the same generic arguments
+            var newGenericMethod = new GenericInstanceMethod(newMethodRef);
+            foreach (var genArg in genericMethod.GenericArguments)
+            {
+                newGenericMethod.GenericArguments.Add(genArg);
+            }
+            
+            // Replace the instruction's operand
+            instr.Operand = newGenericMethod;
+        }
+        
         // Patch GetFormatMetaData<PngMetaData>(PngFormat.Instance) -> GetPngMetadata()
         // And MetaData -> Metadata property access
         for (var i = il.Count - 1; i >= 0; i--)
