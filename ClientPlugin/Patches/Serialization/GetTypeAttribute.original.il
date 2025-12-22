@@ -1,4 +1,4 @@
-// 3d15efaa
+// b261e96a
 ldarg.1
 ldstr "xsi:type"
 callvirt System.String System.Xml.XmlReader::GetAttribute(System.String)
