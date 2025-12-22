@@ -301,6 +301,13 @@ public static class MyImagePrepatch
                     
                     var getPngMetadataMethod = new MethodReference("GetPngMetadata", pngMetadataType, imageMetadataType) { HasThis = true };
                     il[i].Operand = getPngMetadataMethod;
+
+                    // Update local variable 2 type from PngMetaData to PngMetadata
+                    // The GetPngMetadata() result is stored in stloc.2
+                    if (method.Body.Variables.Count > 2)
+                    {
+                        method.Body.Variables[2].VariableType = pngMetadataType;
+                    }
                 }
             }
         }
