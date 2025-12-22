@@ -304,6 +304,27 @@ public static class MyImagePrepatch
                 }
             }
         }
+
+        // Fix up remaining references to the old PNG metadata type name.
+        // In ImageSharp 3.x the type was renamed from PngMetaData -> PngMetadata.
+        for (var i = 0; i < il.Count; i++)
+        {
+            var instr = il[i];
+            if (instr.Operand is not MethodReference mr)
+                continue;
+
+            if (mr.DeclaringType.Namespace != "SixLabors.ImageSharp.Formats.Png" || mr.DeclaringType.Name != "PngMetaData")
+                continue;
+
+            var pngMetadataType = new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngMetadata", module,
+                module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp"), false);
+
+            var newMethodRef = new MethodReference(mr.Name, mr.ReturnType, pngMetadataType) { HasThis = mr.HasThis };
+            foreach (var p in mr.Parameters)
+                newMethodRef.Parameters.Add(new ParameterDefinition(p.ParameterType));
+
+            instr.Operand = newMethodRef;
+        }
         
         il.RecordPatchedCode(method);
     }

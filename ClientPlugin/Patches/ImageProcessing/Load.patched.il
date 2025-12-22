@@ -11,7 +11,7 @@ brtrue.s IL_002c
 ldloca.s 0 (SixLabors.ImageSharp.ImageInfo)
 call SixLabors.ImageSharp.Metadata.ImageMetadata SixLabors.ImageSharp.ImageInfo::get_Metadata()
 callvirt SixLabors.ImageSharp.Formats.Png.PngMetadata SixLabors.ImageSharp.Metadata.ImageMetadata::GetPngMetadata()
-callvirt SixLabors.ImageSharp.Formats.Png.PngColorType SixLabors.ImageSharp.Formats.Png.PngMetaData::get_ColorType()
+callvirt SixLabors.ImageSharp.Formats.Png.PngColorType SixLabors.ImageSharp.Formats.Png.PngMetadata::get_ColorType()
 ldc.i4.0
 ceq
 starg.s oneChannel (System.Boolean)
@@ -65,10 +65,10 @@ call SixLabors.ImageSharp.Metadata.ImageMetadata SixLabors.ImageSharp.ImageInfo:
 callvirt SixLabors.ImageSharp.Formats.Png.PngMetadata SixLabors.ImageSharp.Metadata.ImageMetadata::GetPngMetadata()
 stloc.2
 ldloc.2
-callvirt SixLabors.ImageSharp.Formats.Png.PngColorType SixLabors.ImageSharp.Formats.Png.PngMetaData::get_ColorType()
+callvirt SixLabors.ImageSharp.Formats.Png.PngColorType SixLabors.ImageSharp.Formats.Png.PngMetadata::get_ColorType()
 brtrue.s IL_00c1
 ldloc.2
-callvirt SixLabors.ImageSharp.Formats.Png.PngBitDepth SixLabors.ImageSharp.Formats.Png.PngMetaData::get_BitDepth()
+callvirt SixLabors.ImageSharp.Formats.Png.PngBitDepth SixLabors.ImageSharp.Formats.Png.PngMetadata::get_BitDepth()
 stloc.1
 ldloc.1
 ldc.i4.8

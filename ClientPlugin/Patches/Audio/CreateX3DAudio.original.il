@@ -1,4 +1,4 @@
-// cd1478c6
+// 7a879a9a
 ldarg.0
 ldfld SharpDX.XAudio2.XAudio2 VRage.Audio.MyXAudio2::m_audioEngine
 brtrue.s L0
