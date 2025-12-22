@@ -94,6 +94,7 @@ public static class MyImagePrepatch
         method.Body.Variables[0].VariableType = imageInfoType;
         
         // Patch Image.Identify() return type and all IImageInfo interface calls
+        // Since ImageInfo is a value type, we need to change ldloc.0 to ldloca.s 0 before method calls
         for (var i = 0; i < il.Count; i++)
         {
             var instr = il[i];
@@ -120,13 +121,27 @@ public static class MyImagePrepatch
                     var returnType = interfaceMethodRef.ReturnType;
                     
                     // For ImageInfo (struct), we need to use Call instead of Callvirt
-                    // But first we need stloc/ldloca to get the address
                     if (methodName == "get_PixelType" || methodName == "get_Width" || methodName == "get_Height")
                     {
                         var newMethodRef = new MethodReference(methodName, returnType, imageInfoType) { HasThis = true };
                         instr.Operand = newMethodRef;
                         // Change from callvirt to call for value type
                         instr.OpCode = OpCodes.Call;
+                        
+                        // Change preceding ldloc.0 to ldloca.s 0 for value type method call
+                        if (i > 0)
+                        {
+                            var prevInstr = il[i - 1];
+                            if (prevInstr.OpCode == OpCodes.Ldloc_0)
+                            {
+                                prevInstr.OpCode = OpCodes.Ldloca_S;
+                                prevInstr.Operand = method.Body.Variables[0];
+                            }
+                            else if (prevInstr.OpCode == OpCodes.Ldloc && prevInstr.Operand is VariableDefinition varDef && varDef.Index == 0)
+                            {
+                                prevInstr.OpCode = OpCodes.Ldloca;
+                            }
+                        }
                     }
                 }
             }
@@ -183,6 +198,24 @@ public static class MyImagePrepatch
                     
                     var getMetadataMethod = new MethodReference("get_Metadata", metadataType, imageInfoType) { HasThis = true };
                     instr.Operand = getMetadataMethod;
+                    
+                    // Change from callvirt to call for value type
+                    instr.OpCode = OpCodes.Call;
+                    
+                    // Change preceding ldloc.0 to ldloca.s 0 for value type method call
+                    if (i > 0)
+                    {
+                        var prevInstr = il[i - 1];
+                        if (prevInstr.OpCode == OpCodes.Ldloc_0)
+                        {
+                            prevInstr.OpCode = OpCodes.Ldloca_S;
+                            prevInstr.Operand = method.Body.Variables[0];
+                        }
+                        else if (prevInstr.OpCode == OpCodes.Ldloc && prevInstr.Operand is VariableDefinition varDef && varDef.Index == 0)
+                        {
+                            prevInstr.OpCode = OpCodes.Ldloca;
+                        }
+                    }
                 }
             }
             
