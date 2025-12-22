@@ -95,9 +95,9 @@ public static class MyImagePrepatch
         
         var imageSharpRef = module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp");
         
-        // Create ImageInfo type reference (value type/struct in new API)
-        var imageInfoType = new TypeReference("SixLabors.ImageSharp", "ImageInfo", module, imageSharpRef, true);
-        imageInfoType = (TypeReference)module.ImportReference(imageInfoType);
+        // Create ImageInfo type reference
+        var imageInfoType = new TypeReference("SixLabors.ImageSharp", "ImageInfo", module, imageSharpRef, false);
+        imageInfoType = module.ImportReference(imageInfoType);
         
         // Patch local variable 0: IImageInfo -> ImageInfo
         Debug.Assert(method.Body.Variables.Count > 0, "Expected at least one local variable");
