@@ -18,11 +18,59 @@ public static class MyImagePrepatch
         
         // Patch the static MyImage class
         var myImageType = module.GetType("VRage.Render.Image.MyImage");
+        PatchMyImageStaticConstructor(module, myImageType);
         PatchMyImageLoad(module, myImageType);
         
         // Patch the generic MyImage<TData> class
         var myImageGenericType = module.GetTypes().First(t => t.FullName.StartsWith("VRage.Render.Image.MyImage`1"));
         PatchMyImageGenericCreateStream(module, myImageGenericType);
+    }
+
+    private static void PatchMyImageStaticConstructor(ModuleDefinition module, TypeDefinition type)
+    {
+        // Find the static constructor (.cctor)
+        var method = type.Methods.First(m => m.Name == ".cctor");
+        var il = method.Body.Instructions;
+        
+        // Patch the MemoryAllocator namespace change from SixLabors.Memory to SixLabors.ImageSharp.Memory
+        // Original IL:
+        //   IL_0005: newobj instance void [SixLabors.Core]SixLabors.Memory.SimpleGcMemoryAllocator::.ctor()
+        //   IL_000a: callvirt instance void [SixLabors.ImageSharp]SixLabors.ImageSharp.Configuration::set_MemoryAllocator(class [SixLabors.Core]SixLabors.Memory.MemoryAllocator)
+        
+        var imageSharpRef = module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp");
+        
+        for (var i = 0; i < il.Count; i++)
+        {
+            var instr = il[i];
+            
+            // Replace SimpleGcMemoryAllocator constructor
+            if (instr.OpCode == OpCodes.Newobj && instr.Operand is MethodReference ctorRef)
+            {
+                if (ctorRef.DeclaringType.Name == "SimpleGcMemoryAllocator" && 
+                    ctorRef.DeclaringType.Namespace == "SixLabors.Memory")
+                {
+                    // Change namespace from SixLabors.Memory to SixLabors.ImageSharp.Memory
+                    var newAllocatorType = new TypeReference("SixLabors.ImageSharp.Memory", "SimpleGcMemoryAllocator", module, imageSharpRef, false);
+                    var newCtorRef = new MethodReference(".ctor", module.TypeSystem.Void, newAllocatorType) { HasThis = true };
+                    instr.Operand = newCtorRef;
+                }
+            }
+            
+            // Replace set_MemoryAllocator parameter type
+            if (instr.OpCode == OpCodes.Callvirt && instr.Operand is MethodReference setterRef)
+            {
+                if (setterRef.Name == "set_MemoryAllocator" && setterRef.DeclaringType.Name == "Configuration")
+                {
+                    // Create new method reference with updated parameter type
+                    var configType = new TypeReference("SixLabors.ImageSharp", "Configuration", module, imageSharpRef, false);
+                    var memoryAllocatorType = new TypeReference("SixLabors.ImageSharp.Memory", "MemoryAllocator", module, imageSharpRef, false);
+                    
+                    var newSetterRef = new MethodReference("set_MemoryAllocator", module.TypeSystem.Void, configType) { HasThis = true };
+                    newSetterRef.Parameters.Add(new ParameterDefinition(memoryAllocatorType));
+                    instr.Operand = newSetterRef;
+                }
+            }
+        }
     }
 
     private static void PatchMyImageLoad(ModuleDefinition module, TypeDefinition type)
