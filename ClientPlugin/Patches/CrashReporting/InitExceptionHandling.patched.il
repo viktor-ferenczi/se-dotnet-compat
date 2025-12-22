@@ -1,4 +1,4 @@
-// 8c2e2fed
+// 04b23921
 newobj System.Void Sandbox.<>c__DisplayClass11_0::.ctor()
 stloc.0
 ldsfld System.Func`1<System.Int32> Sandbox.<>c::<>9__11_0
