@@ -54,6 +54,7 @@ public static class MyImagePrepatch
                 {
                     // Change namespace from SixLabors.Memory to SixLabors.ImageSharp.Memory
                     var newAllocatorType = new TypeReference("SixLabors.ImageSharp.Memory", "SimpleGcMemoryAllocator", module, imageSharpRef, false);
+                    newAllocatorType = (TypeReference)module.ImportReference(newAllocatorType);
                     var newCtorRef = new MethodReference(".ctor", module.TypeSystem.Void, newAllocatorType) { HasThis = true };
                     instr.Operand = newCtorRef;
                 }
@@ -66,7 +67,9 @@ public static class MyImagePrepatch
                 {
                     // Create new method reference with updated parameter type
                     var configType = new TypeReference("SixLabors.ImageSharp", "Configuration", module, imageSharpRef, false);
+                    configType = (TypeReference)module.ImportReference(configType);
                     var memoryAllocatorType = new TypeReference("SixLabors.ImageSharp.Memory", "MemoryAllocator", module, imageSharpRef, false);
+                    memoryAllocatorType = (TypeReference)module.ImportReference(memoryAllocatorType);
                     
                     var newSetterRef = new MethodReference("set_MemoryAllocator", module.TypeSystem.Void, configType) { HasThis = true };
                     newSetterRef.Parameters.Add(new ParameterDefinition(memoryAllocatorType));
@@ -94,6 +97,7 @@ public static class MyImagePrepatch
         
         // Create ImageInfo type reference (value type/struct in new API)
         var imageInfoType = new TypeReference("SixLabors.ImageSharp", "ImageInfo", module, imageSharpRef, true);
+        imageInfoType = (TypeReference)module.ImportReference(imageInfoType);
         
         // Patch local variable 0: IImageInfo -> ImageInfo
         Debug.Assert(method.Body.Variables.Count > 0, "Expected at least one local variable");
@@ -113,6 +117,7 @@ public static class MyImagePrepatch
                 if (identifyRef.Name == "Identify" && identifyRef.DeclaringType.Name == "Image")
                 {
                     var imageType = new TypeReference("SixLabors.ImageSharp", "Image", module, imageSharpRef, false);
+                    imageType = (TypeReference)module.ImportReference(imageType);
                     var newIdentifyRef = new MethodReference("Identify", imageInfoType, imageType);
                     newIdentifyRef.Parameters.Add(new ParameterDefinition(module.ImportReference(typeof(global::System.IO.Stream))));
                     instr.Operand = newIdentifyRef;

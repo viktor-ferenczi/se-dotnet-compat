@@ -1,4 +1,4 @@
-// 51a8a019
+// 70ca30d3
 ldarg.0
 ldarg.2
 stfld System.Xml.XmlWriter VRage.CustomRootWriter::m_target
