@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using System.Linq;
+using ClientPlugin.Tools;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -31,6 +32,8 @@ public static class MyImagePrepatch
         // Find the static constructor (.cctor)
         var method = type.Methods.First(m => m.Name == ".cctor");
         var il = method.Body.Instructions;
+        
+        il.RecordOriginalCode(method);
         
         // Patch the MemoryAllocator namespace change from SixLabors.Memory to SixLabors.ImageSharp.Memory
         // Original IL:
@@ -71,6 +74,8 @@ public static class MyImagePrepatch
                 }
             }
         }
+        
+        il.RecordPatchedCode(method);
     }
 
     private static void PatchMyImageLoad(ModuleDefinition module, TypeDefinition type)
@@ -82,6 +87,9 @@ public static class MyImagePrepatch
             m.Parameters[0].ParameterType.Name == "Stream");
         
         var il = method.Body.Instructions;
+        
+        il.RecordOriginalCode(method);
+        
         var imageSharpRef = module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp");
         
         // Create ImageInfo type reference (value type/struct in new API)
@@ -246,6 +254,8 @@ public static class MyImagePrepatch
                 }
             }
         }
+        
+        il.RecordPatchedCode(method);
     }
     
     private static void PatchMyImageGenericCreateStream(ModuleDefinition module, TypeDefinition type)
@@ -257,6 +267,8 @@ public static class MyImagePrepatch
             m.Parameters[0].ParameterType.Name == "Stream");
         
         var il = method.Body.Instructions;
+        
+        il.RecordOriginalCode(method);
         
         // Find GetPixelSpan<TImage> call and replace with GetPixelMemoryGroup().Single().Span
         // Original: call valuetype [System.Memory]System.Span`1<!!0> [SixLabors.ImageSharp]SixLabors.ImageSharp.Advanced.AdvancedImageExtensions::GetPixelSpan<!!TImage>(...)
@@ -349,6 +361,8 @@ public static class MyImagePrepatch
             
             break; // Only one GetPixelSpan call in this method
         }
+        
+        il.RecordPatchedCode(method);
     }
 }
 

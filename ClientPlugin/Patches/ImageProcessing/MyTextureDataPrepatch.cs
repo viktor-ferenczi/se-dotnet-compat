@@ -1,6 +1,7 @@
 #if SIXLABORS_FIXES
 
 using System.Linq;
+using ClientPlugin.Tools;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -28,6 +29,8 @@ public static class MyTextureDataPrepatch
             m.Parameters[0].ParameterType.Name == "Format");
         
         var il = method.Body.Instructions;
+        
+        il.RecordOriginalCode(method);
         
         // Patch all Gray8 -> L8 and Gray16 -> L16 references in MyImage.Save<TPixel> calls
         // These are calls like: call void [VRage.Render]VRage.Render.Image.MyImage::Save<valuetype [SixLabors.ImageSharp]SixLabors.ImageSharp.PixelFormats.Gray16>(...)
@@ -65,6 +68,8 @@ public static class MyTextureDataPrepatch
                 }
             }
         }
+        
+        il.RecordPatchedCode(method);
     }
 }
 

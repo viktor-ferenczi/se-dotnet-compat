@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
 
-namespace Pulsar.Shared.Utils;
+namespace ClientPlugin.Tools;
 
 public static class Hashing
 {
@@ -36,6 +38,26 @@ public static class Hashing
 
             foreach (var label in instruction.labels)
                 yield return label.GetHashCode();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static IEnumerable<int> HashInstructions(this IEnumerable<Instruction> instructions, MethodDefinition method)
+    {
+        foreach (var instruction in instructions)
+        {
+            yield return instruction.OpCode.GetHashCode();
+
+            if (instruction.Operand != null)
+            {
+                var operandType = instruction.Operand.GetType();
+                
+                if (operandType.IsValueType)
+                    yield return instruction.Operand.GetHashCode();
+
+                if (instruction.Operand is string)
+                    yield return instruction.Operand.GetHashCode();
+            }
         }
     }
 

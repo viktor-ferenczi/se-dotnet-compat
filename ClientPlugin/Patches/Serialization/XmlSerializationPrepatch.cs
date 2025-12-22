@@ -1,12 +1,12 @@
 ﻿using System.Diagnostics;
 using System.Linq;
+using ClientPlugin.Tools;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using NotImplementedException = System.NotImplementedException;
 
 namespace ClientPlugin.Patches.Serialization;
 
-public class XmlSerializationPrepatch
+public static class XmlSerializationPrepatch
 {
     private const string XSI_NS_URL = "http://www.w3.org/2001/XMLSchema-instance";
 
@@ -28,6 +28,8 @@ public class XmlSerializationPrepatch
         Debug.Assert(method != null, "Could not find the Init method");
         var body = method.Body;
         var il = body.Instructions;
+
+        il.RecordOriginalCode(method);
 
         //- m_target.WriteAttributeString("xsi:type", m_customRootType);
         //+ m_target.WriteAttributeString("xsi", "type", XSI_NS_URL, m_customRootType);
@@ -77,6 +79,8 @@ public class XmlSerializationPrepatch
 
         // Update the callvirt to use the 4-parameter overload (index shifted by 2 due to insertions)
         il[callvirtIndex + 2].Operand = writeAttributeString4Param;
+        
+        il.RecordPatchedCode(method);
     }
 
     private static void PrepatchMyAbstractXmlSerializer(ModuleDefinition module)
@@ -86,6 +90,8 @@ public class XmlSerializationPrepatch
         Debug.Assert(method != null, "Could not find the GetTypeAttribute method");
         var body = method.Body;
         var il = body.Instructions;
+        
+        il.RecordOriginalCode(method);
         
         //- return reader.GetAttribute("xsi:type");
         //+ return reader.GetAttribute("type", XSI_NS_URL);

@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using HarmonyLib;
 
-namespace Pulsar.Shared.Utils;
+namespace ClientPlugin.Tools;
 
 // Useful methods in transpiler patches.
 // For usage examples please search this repo:
@@ -178,7 +178,7 @@ public static class TranspilerHelpers
                 return d.ToString(CultureInfo.InvariantCulture);
                 
             default:
-                return argument.ToString().Trim();
+                return argument.ToString()?.Trim() ?? "null";
         }
     }
 

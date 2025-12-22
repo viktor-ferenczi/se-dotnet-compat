@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Diagnostics;
-using Pulsar.Shared.Utils;
 using HarmonyLib;
 using Sandbox;
 using System.Reflection.Emit;
+using ClientPlugin.Tools;
 
 namespace ClientPlugin.Patches.CrashReporting;
 
