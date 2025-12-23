@@ -1,4 +1,4 @@
-// d2b17013
+// 1154e493
 ldarg.0
 ldfld SharpDX.XAudio2.XAudio2 VRage.Audio.MyXAudio2::m_audioEngine
 brtrue.s L0

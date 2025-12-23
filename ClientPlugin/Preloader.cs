@@ -5,6 +5,7 @@ using System;
 using System.Reflection;
 using HarmonyLib;
 using System.Collections.Generic;
+using System.Linq;
 using ClientPlugin;
 using ClientPlugin.Patches.ImageProcessing;
 using ClientPlugin.Patches.NullSafety;
@@ -20,11 +21,28 @@ public static class Preloader
     // ReSharper disable once UnusedMember.Global
     public static IEnumerable<string> TargetDLLs { get; } =
     [
+        // Game DLLs
+        "HavokWrapper.dll",
+        "Sandbox.Common.dll",
         "Sandbox.Game.dll",
+        "Sandbox.Graphics.dll",
+        "SpaceEngineers.Game.dll",
         "VRage.dll",
+        "VRage.Audio.dll",
         "VRage.Game.dll",
+        "VRage.Input.dll",
+        "VRage.Library.dll",
+        "VRage.Math.dll",
+        "VRage.Network.dll",
+        "VRage.Platform.Windows.dll",
         "VRage.Render.dll",
         "VRage.Render11.dll",
+        "VRage.Scripting.dll",
+        
+        // Dependency DLLs
+        "SharpDX.dll",
+        "SharpDX.DXGI.dll",
+        "SharpDX.XAudio2.dll",
     ];
 
     // ReSharper disable once UnusedMember.Global
@@ -64,6 +82,17 @@ public static class Preloader
 #endif
 
         var harmony = new Harmony("DotNetCompat");
-        harmony.PatchAll(Assembly.GetExecutingAssembly());
+        // harmony.PatchAll(Assembly.GetExecutingAssembly());
+
+        var assembly = Assembly.GetExecutingAssembly();
+        var typesFromAssembly = AccessTools.GetTypesFromAssembly(assembly).ToList();
+        typesFromAssembly.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+        typesFromAssembly.Do(type =>
+        {
+#if DEBUG
+            Console.WriteLine($"Patching: {type.Name}");
+#endif
+            harmony.CreateClassProcessor(type).Patch();
+        });
     }
 }
