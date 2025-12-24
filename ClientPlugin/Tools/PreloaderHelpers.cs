@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -8,6 +9,7 @@ using System.Text;
 using HarmonyLib;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 
 namespace ClientPlugin.Tools;
 
@@ -15,20 +17,54 @@ namespace ClientPlugin.Tools;
 // For usage examples, see the various *Prepatch.cs files.
 public static class PreloaderHelpers
 {
-    public static string Hash(this IEnumerable<Instruction> instructions, MethodDefinition method)
+    public delegate bool CodeInstructionPredicate(Instruction ci);
+
+    public static int FindFirstIndex(this Collection<Instruction> il, CodeInstructionPredicate predicate)
     {
-        return instructions.HashInstructions(method).CombineHashCodes().ToString("x8");
+        return il.Select((instruction, index) => new { Instruction = instruction, Index = index })
+            .Where(pair => predicate(pair.Instruction))
+            .Select(pair => pair.Index)
+            .FirstOrDefault(-1);
+    }
+    
+    public static int FindLastIndex(this Collection<Instruction> il, CodeInstructionPredicate predicate)
+    {
+        return il.Select((instruction, index) => new { Instruction = instruction, Index = index })
+            .Where(pair => predicate(pair.Instruction))
+            .Select(pair => pair.Index)
+            .LastOrDefault(-1);
+    }
+    
+    public static List<int> FindAllIndex(this Collection<Instruction> il, CodeInstructionPredicate predicate)
+    {
+        return il.Select((instruction, index) => new { Instruction = instruction, Index = index })
+            .Where(pair => predicate(pair.Instruction))
+            .Select(pair => pair.Index)
+            .ToList();
+    }
+    
+    public static string Hash(this Collection<Instruction> instructions)
+    {
+        return instructions.HashInstructions().CombineHashCodes().ToString("x8");
+    }
+    
+    public static void VerifyCodeHash(this Collection<Instruction> il, MethodDefinition patchedMethod, string expected)
+    {
+        var actual = il.Hash();
+        if (actual != expected)
+        {
+            throw new Exception($"Prepatch: Detected code change in {patchedMethod.Name}: actual {actual}, expected {expected}");
+        }
     }
 
-    private static string FormatCode(this IEnumerable<Instruction> instructions, MethodDefinition method)
+    private static string FormatCode(this Collection<Instruction> instructions)
     {
         var sb = new StringBuilder();
 
-        var instructionsList = instructions.ToList();
-        var hash = instructionsList.Hash(method);
+        var hash = instructions.Hash();
         sb.Append($"// {hash}\r\n");
 
-        foreach (var instr in instructionsList)
+        foreach (var instr in instructions)
         {
             sb.Append(instr.ToCodeLine());
             sb.Append("\r\n");
@@ -200,22 +236,22 @@ public static class PreloaderHelpers
         return sb.ToString();
     }
 
-    public static void RecordOriginalCode(this IEnumerable<Instruction> instructions, MethodDefinition method, [CallerFilePath] string callerFilePath = "", [CallerMemberName] string callerMemberName = "")
+    public static void RecordOriginalCode(this Collection<Instruction> instructions, MethodDefinition method, [CallerFilePath] string callerFilePath = "", [CallerMemberName] string callerMemberName = "")
     {
         RecordCode(instructions, method, callerFilePath, callerMemberName, "original");
     }
 
-    public static void RecordPatchedCode(this IEnumerable<Instruction> instructions, MethodDefinition method, [CallerFilePath] string callerFilePath = "", [CallerMemberName] string callerMemberName = "")
+    public static void RecordPatchedCode(this Collection<Instruction> instructions, MethodDefinition method, [CallerFilePath] string callerFilePath = "", [CallerMemberName] string callerMemberName = "")
     {
         RecordCode(instructions, method, callerFilePath, callerMemberName, "patched");
     }
 
-    public static void RecordCustomCode(this IEnumerable<Instruction> instructions, MethodDefinition method, string suffix, [CallerFilePath] string callerFilePath = "", [CallerMemberName] string callerMemberName = "")
+    public static void RecordCustomCode(this Collection<Instruction> instructions, MethodDefinition method, string suffix, [CallerFilePath] string callerFilePath = "", [CallerMemberName] string callerMemberName = "")
     {
         RecordCode(instructions, method, callerFilePath, callerMemberName, suffix);
     }
 
-    private static void RecordCode(IEnumerable<Instruction> instructions, MethodDefinition method, string callerFilePath, string callerMemberName, string suffix)
+    private static void RecordCode(Collection<Instruction> instructions, MethodDefinition method, string callerFilePath, string callerMemberName, string suffix)
     {
 #if DEBUG
         Debug.Assert(callerFilePath.Length > 0);
@@ -235,7 +271,7 @@ public static class PreloaderHelpers
 
         var path = Path.Combine(dir, $"{name}.{suffix}.il");
 
-        var text = instructions.FormatCode(method);
+        var text = instructions.FormatCode();
 
         if (File.Exists(path) && File.ReadAllText(path) == text)
             return;
@@ -243,18 +279,4 @@ public static class PreloaderHelpers
         File.WriteAllText(path, text);
 #endif
     }
-
-    // Note: The following helper methods from TranspilerHelpers cannot be directly ported to Cecil
-    // because Cecil's Instruction collection works differently from Harmony's CodeInstruction list.
-    // Cecil instructions are in a linked list structure and don't support the same query operations.
-    // If needed, these would need to be reimplemented with different logic specific to each use case.
-
-    // - FindAllIndex (Cecil uses linked list, not indexed list)
-    // - GetField (would need to iterate through Collection<Instruction>)
-    // - FindPropertyGetter (would need to iterate through Collection<Instruction>)
-    // - FindPropertySetter (would need to iterate through Collection<Instruction>)
-    // - GetLabel (Cecil uses Instruction references instead of Label structs)
-    // - RemoveFieldInitialization (Cecil has different remove semantics)
-    // - VerifyCodeHash (can be added if needed)
-    // - DeepClone (Cecil has its own cloning mechanism)
 }

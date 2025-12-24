@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
-using Mono.Cecil;
 using Mono.Cecil.Cil;
 
 namespace ClientPlugin.Tools;
@@ -42,7 +41,7 @@ public static class Hashing
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IEnumerable<int> HashInstructions(this IEnumerable<Instruction> instructions, MethodDefinition method)
+    public static IEnumerable<int> HashInstructions(this IEnumerable<Instruction> instructions)
     {
         foreach (var instruction in instructions)
         {
