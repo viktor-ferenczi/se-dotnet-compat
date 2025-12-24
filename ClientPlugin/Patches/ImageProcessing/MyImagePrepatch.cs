@@ -168,10 +168,13 @@ public static class MyImagePrepatch
         // First, fix any remaining get_MetaData calls (old API with uppercase 'D') to get_Metadata (new API with lowercase 'd')
         // This must be done BEFORE looking for the GetFormatMetaData pattern
         var newMetadataGetter = new MethodReference("get_Metadata", imageMetadataType, imageInfoType) { HasThis = true };
+        var newColorTypeGetter = new MethodReference("get_ColorType", nullablePngColorType, pngMetadataType) { HasThis = true };
         foreach (var ins in il)
         {
-            if (ins.OpCode == OpCodes.Callvirt && ins.Operand is MethodReference mr && mr.Name == "get_MetaData")
+            if (ins.OpCode == OpCodes.Callvirt && ins.Operand is MethodReference mr1 && mr1.Name == "get_MetaData")
                 ins.Operand = module.ImportReference(newMetadataGetter);
+            if (ins.OpCode == OpCodes.Callvirt && ins.Operand is MethodReference mr2 && mr2.Name == "get_ColorType")
+                ins.Operand = module.ImportReference(newColorTypeGetter);
         }
 
         // AI generated:

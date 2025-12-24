@@ -1,4 +1,4 @@
-// 6ed82c07
+// 450b6684
 ldsfld VRageMath.Vector2 VRageMath.Vector2::Zero
 stloc.0
 ldc.i4.8

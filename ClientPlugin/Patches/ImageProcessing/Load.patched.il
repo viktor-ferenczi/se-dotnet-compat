@@ -73,7 +73,7 @@ callvirt SixLabors.ImageSharp.Metadata.ImageMetadata SixLabors.ImageSharp.ImageI
 call SixLabors.ImageSharp.Formats.Png.PngMetadata SixLabors.ImageSharp.MetadataExtensions::GetPngMetadata(SixLabors.ImageSharp.Metadata.ImageMetadata)
 stloc.2
 ldloc.2
-callvirt SixLabors.ImageSharp.Formats.Png.PngColorType SixLabors.ImageSharp.Formats.Png.PngMetadata::get_ColorType()
+callvirt System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType> SixLabors.ImageSharp.Formats.Png.PngMetadata::get_ColorType()
 brtrue.s IL_00c1
 ldloc.2
 callvirt SixLabors.ImageSharp.Formats.Png.PngBitDepth SixLabors.ImageSharp.Formats.Png.PngMetadata::get_BitDepth()
