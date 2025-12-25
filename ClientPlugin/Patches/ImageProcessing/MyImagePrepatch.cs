@@ -134,8 +134,14 @@ public static class MyImagePrepatch
         var pngMetadataType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngMetadata", module, sixLaborsImageSharpScope, false));
         var pngColorTypeType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngColorType", module, sixLaborsImageSharpScope, true));
         
-        // Create Nullable<PngColorType> using proper generic instantiation
-        var nullableTypeRef = new TypeReference("System", "Nullable`1", module, module.TypeSystem.CoreLibrary, true);
+        // Get or create System.Runtime assembly reference for Nullable<T>
+        var systemRuntimeRef = module.AssemblyReferences.FirstOrDefault(r => r.Name == "System.Runtime")
+                              ?? new AssemblyNameReference("System.Runtime", new global::System.Version(4, 0, 0, 0));
+        if (!module.AssemblyReferences.Contains(systemRuntimeRef))
+            module.AssemblyReferences.Add(systemRuntimeRef);
+        
+        // Create Nullable<PngColorType> using proper generic instantiation with System.Runtime scope
+        var nullableTypeRef = new TypeReference("System", "Nullable`1", module, systemRuntimeRef, true);
         var nullablePngColorType = new GenericInstanceType(nullableTypeRef);
         nullablePngColorType.GenericArguments.Add(pngColorTypeType);
         nullablePngColorType = (GenericInstanceType)module.ImportReference(nullablePngColorType);
@@ -274,7 +280,10 @@ public static class MyImagePrepatch
         //   stloc.1                      // store as byte (after implicit conversion)
         
         var pngBitDepthType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngBitDepth", module, sixLaborsImageSharpScope, true));
-        var nullablePngBitDepth = new GenericInstanceType(nullableTypeRef);
+        
+        // Create Nullable<PngBitDepth> using the same System.Runtime assembly reference
+        var nullableTypeRefBitDepth = new TypeReference("System", "Nullable`1", module, systemRuntimeRef, true);
+        var nullablePngBitDepth = new GenericInstanceType(nullableTypeRefBitDepth);
         nullablePngBitDepth.GenericArguments.Add(pngBitDepthType);
         nullablePngBitDepth = (GenericInstanceType)module.ImportReference(nullablePngBitDepth);
         var getBitDepthMethod = new MethodReference("get_BitDepth", nullablePngBitDepth, pngMetadataType) { HasThis = true };
