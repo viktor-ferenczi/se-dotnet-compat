@@ -138,5 +138,7 @@ public static class XmlSerializationPrepatch
 
         // Update the callvirt to use the 2-parameter overload (index shifted by 1 due to insertion)
         il[callvirtIndex + 1].Operand = getAttribute2Param;
+        
+        il.RecordPatchedCode(method);
     }
 }

@@ -267,7 +267,7 @@ public static class PreloaderHelpers
             ? callerMemberName.EndsWith("Prepatch")
                 ? callerMemberName.Substring(0, callerMemberName.Length - "Prepatch".Length)
                 : callerMemberName
-            : method.Name.Replace(".ctor", "Constructor").Replace(".cctor", "StaticConstructor");
+            : method.DeclaringType.Name.Split("`")[0] + "." + method.Name.Replace(".ctor", "Constructor").Replace(".cctor", "StaticConstructor");
 
         var path = Path.Combine(dir, $"{name}.{suffix}.il");
 
