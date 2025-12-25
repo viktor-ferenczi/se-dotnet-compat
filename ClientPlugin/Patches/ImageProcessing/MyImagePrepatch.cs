@@ -132,18 +132,14 @@ public static class MyImagePrepatch
         var metadataExtensionsType = module.ImportReference(new TypeReference("SixLabors.ImageSharp", "MetadataExtensions", module, sixLaborsImageSharpScope, false));
         var pngMetadataType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngMetadata", module, sixLaborsImageSharpScope, false));
         var pngColorTypeType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngColorType", module, sixLaborsImageSharpScope, true));
-        var systemRuntimeScope = module.AssemblyReferences.FirstOrDefault(r => r.Name == "System.Runtime") 
-                               ?? module.AssemblyReferences.First(r => r.Name == "netstandard");
-        var nullableTypeRef = module.ImportReference(new TypeReference("System", "Nullable`1", module, systemRuntimeScope, true));
+        var nullableTypeRef = module.ImportReference(new TypeReference("System", "Nullable`1", module, module.TypeSystem.CoreLibrary, true));
         var nullablePngColorType = new GenericInstanceType(nullableTypeRef);
         nullablePngColorType.GenericArguments.Add(pngColorTypeType);
         
-        // Add new local variables to avoid conflicts with existing variables
+        // Add new local variable to avoid conflicts with existing variables
         // The second occurrence of the pattern uses loc.2 for PngMetadata, so we need different variables here
         var nullableColorTypeVar = new VariableDefinition(nullablePngColorType);
-        var tempIntVar = new VariableDefinition(module.TypeSystem.Int32);
         method.Body.Variables.Add(nullableColorTypeVar);
-        method.Body.Variables.Add(tempIntVar);
         
         // Create method references with proper return types
         var getMetadataMethod = new MethodReference("get_Metadata", imageMetadataType, imageInfoType) { HasThis = true };
@@ -151,18 +147,16 @@ public static class MyImagePrepatch
         getPngMetadataMethod.Parameters.Add(new ParameterDefinition(imageMetadataType));
         var getColorTypeMethod = new MethodReference("get_ColorType", nullablePngColorType, pngMetadataType) { HasThis = true };
         
-        // Insert IL instructions using the new local variables
+        // Insert IL instructions using the new local variable
         il.Insert(i++, Instruction.Create(OpCodes.Ldloc_0));
         il.Insert(i++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getMetadataMethod)));
         il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getPngMetadataMethod)));
         il.Insert(i++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getColorTypeMethod)));
         il.Insert(i++, Instruction.Create(OpCodes.Stloc, nullableColorTypeVar));
-        il.Insert(i++, Instruction.Create(OpCodes.Ldc_I4_0));
-        il.Insert(i++, Instruction.Create(OpCodes.Stloc, tempIntVar));
         il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, nullableColorTypeVar));
         var getValueOrDefaultMethod = new MethodReference("GetValueOrDefault", pngColorTypeType, nullablePngColorType) { HasThis = true };
         il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getValueOrDefaultMethod)));
-        il.Insert(i++, Instruction.Create(OpCodes.Ldloc, tempIntVar));
+        il.Insert(i++, Instruction.Create(OpCodes.Ldc_I4_0));
         il.Insert(i++, Instruction.Create(OpCodes.Ceq));
         il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, nullableColorTypeVar));
         var getHasValueMethod = new MethodReference("get_HasValue", module.TypeSystem.Boolean, nullablePngColorType) { HasThis = true };
@@ -170,7 +164,7 @@ public static class MyImagePrepatch
         il.Insert(i++, Instruction.Create(OpCodes.And));
         il.Insert(i++, Instruction.Create(OpCodes.Starg_S, method.Parameters.First(p => p.Name == "oneChannel")));
         var size = i - start;
-        Debug.Assert(size == 15, $"Wrong replacement block size of {size}, should be 15");
+        Debug.Assert(size == 13, $"Wrong replacement block size of {size}, should be 13");
 
         // First, fix any remaining get_MetaData calls (old API with uppercase 'D') to get_Metadata (new API with lowercase 'd')
         // This must be done BEFORE looking for the GetFormatMetaData pattern

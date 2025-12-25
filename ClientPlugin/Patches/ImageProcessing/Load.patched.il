@@ -1,4 +1,4 @@
-// 170444e0
+// 321f4f63
 ldarg.0
 call SixLabors.ImageSharp.ImageInfo SixLabors.ImageSharp.Image::Identify(System.IO.Stream)
 stloc.0
@@ -13,11 +13,9 @@ callvirt SixLabors.ImageSharp.Metadata.ImageMetadata SixLabors.ImageSharp.ImageI
 call SixLabors.ImageSharp.Formats.Png.PngMetadata SixLabors.ImageSharp.MetadataExtensions::GetPngMetadata(SixLabors.ImageSharp.Metadata.ImageMetadata)
 callvirt System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType> SixLabors.ImageSharp.Formats.Png.PngMetadata::get_ColorType()
 stloc 3 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>)
-ldc.i4.0
-stloc 4 (System.Int32)
 ldloca.s 3 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>)
 call SixLabors.ImageSharp.Formats.Png.PngColorType System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>::GetValueOrDefault()
-ldloc 4 (System.Int32)
+ldc.i4.0
 ceq
 ldloca.s 3 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>)
 call System.Boolean System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>::get_HasValue()
@@ -74,14 +72,14 @@ call SixLabors.ImageSharp.Formats.Png.PngMetadata SixLabors.ImageSharp.MetadataE
 stloc.2
 ldloc.2
 callvirt System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType> SixLabors.ImageSharp.Formats.Png.PngMetadata::get_ColorType()
-stloc 5 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>)
-ldloca.s 5 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>)
+stloc 4 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>)
+ldloca.s 4 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>)
 call SixLabors.ImageSharp.Formats.Png.PngColorType System.Nullable<SixLabors.ImageSharp.Formats.Png.PngColorType>::GetValueOrDefault()
 brtrue.s IL_00c1
 ldloc.2
 callvirt System.Nullable<SixLabors.ImageSharp.Formats.Png.PngBitDepth> SixLabors.ImageSharp.Formats.Png.PngMetadata::get_BitDepth()
-stloc 6 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngBitDepth>)
-ldloca.s 6 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngBitDepth>)
+stloc 5 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngBitDepth>)
+ldloca.s 5 (System.Nullable<SixLabors.ImageSharp.Formats.Png.PngBitDepth>)
 call SixLabors.ImageSharp.Formats.Png.PngBitDepth System.Nullable<SixLabors.ImageSharp.Formats.Png.PngBitDepth>::GetValueOrDefault()
 stloc.1
 ldloc.1
