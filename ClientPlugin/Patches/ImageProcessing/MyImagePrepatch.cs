@@ -138,6 +138,7 @@ public static class MyImagePrepatch
         var nullableTypeRef = new TypeReference("System", "Nullable`1", module, module.TypeSystem.CoreLibrary, true);
         var nullablePngColorType = new GenericInstanceType(nullableTypeRef);
         nullablePngColorType.GenericArguments.Add(pngColorTypeType);
+        nullablePngColorType = (GenericInstanceType)module.ImportReference(nullablePngColorType);
         
         // Add new local variable to avoid conflicts with existing variables
         // The second occurrence of the pattern uses loc.2 for PngMetadata, so we need different variables here
@@ -158,12 +159,12 @@ public static class MyImagePrepatch
         il.Insert(i++, Instruction.Create(OpCodes.Stloc, nullableColorTypeVar));
         il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, nullableColorTypeVar));
         var getValueOrDefaultMethod = new MethodReference("GetValueOrDefault", pngColorTypeType, nullablePngColorType) { HasThis = true };
-        il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getValueOrDefaultMethod)));
+        il.Insert(i++, Instruction.Create(OpCodes.Call, getValueOrDefaultMethod));
         il.Insert(i++, Instruction.Create(OpCodes.Ldc_I4_0));
         il.Insert(i++, Instruction.Create(OpCodes.Ceq));
         il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, nullableColorTypeVar));
         var getHasValueMethod = new MethodReference("get_HasValue", module.TypeSystem.Boolean, nullablePngColorType) { HasThis = true };
-        il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getHasValueMethod)));
+        il.Insert(i++, Instruction.Create(OpCodes.Call, getHasValueMethod));
         il.Insert(i++, Instruction.Create(OpCodes.And));
         il.Insert(i++, Instruction.Create(OpCodes.Starg_S, method.Parameters.First(p => p.Name == "oneChannel")));
         var size = i - start;
@@ -251,7 +252,7 @@ public static class MyImagePrepatch
                 il.Insert(pos++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getColorTypeMethod)));
                 il.Insert(pos++, Instruction.Create(OpCodes.Stloc, tempNullableVar));
                 il.Insert(pos++, Instruction.Create(OpCodes.Ldloca_S, tempNullableVar));
-                il.Insert(pos++, Instruction.Create(OpCodes.Call, module.ImportReference(getValueOrDefaultMethod)));
+                il.Insert(pos++, Instruction.Create(OpCodes.Call, getValueOrDefaultMethod));
                 il.Insert(pos++, Instruction.Create(OpCodes.Brtrue_S, branchTarget));
                 
                 break; // Only one such pattern
@@ -275,6 +276,7 @@ public static class MyImagePrepatch
         var pngBitDepthType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngBitDepth", module, sixLaborsImageSharpScope, true));
         var nullablePngBitDepth = new GenericInstanceType(nullableTypeRef);
         nullablePngBitDepth.GenericArguments.Add(pngBitDepthType);
+        nullablePngBitDepth = (GenericInstanceType)module.ImportReference(nullablePngBitDepth);
         var getBitDepthMethod = new MethodReference("get_BitDepth", nullablePngBitDepth, pngMetadataType) { HasThis = true };
         var getBitDepthValueOrDefaultMethod = new MethodReference("GetValueOrDefault", pngBitDepthType, nullablePngBitDepth) { HasThis = true };
         
@@ -300,7 +302,7 @@ public static class MyImagePrepatch
                 il.Insert(pos++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getBitDepthMethod)));
                 il.Insert(pos++, Instruction.Create(OpCodes.Stloc, tempNullableBitDepthVar));
                 il.Insert(pos++, Instruction.Create(OpCodes.Ldloca_S, tempNullableBitDepthVar));
-                il.Insert(pos++, Instruction.Create(OpCodes.Call, module.ImportReference(getBitDepthValueOrDefaultMethod)));
+                il.Insert(pos++, Instruction.Create(OpCodes.Call, getBitDepthValueOrDefaultMethod));
                 il.Insert(pos++, Instruction.Create(OpCodes.Stloc_1));
                 
                 break; // Only one such pattern
