@@ -23,6 +23,7 @@ public static class MyImagePrepatch
         PatchStaticConstructor(module, myImageType);
         ReplaceTypes(module, myImageType);
         PatchLoadStream(module, myImageType);
+        PatchSaveStream(module, myImageType);
 
         // Patch the generic MyImage<TData> class
         var myImageGenericType = module.GetTypes().First(t => t.FullName.StartsWith("VRage.Render.Image.MyImage`1"));
@@ -140,11 +141,11 @@ public static class MyImagePrepatch
         if (!module.AssemblyReferences.Contains(systemRuntimeRef))
             module.AssemblyReferences.Add(systemRuntimeRef);
         
-        // Create Nullable<PngColorType> using proper generic instantiation with System.Runtime scope
-        var nullableTypeRef = new TypeReference("System", "Nullable`1", module, systemRuntimeRef, true);
-        var nullablePngColorType = new GenericInstanceType(nullableTypeRef);
+        // Create Nullable<PngColorType> by properly importing the type definition from System.Runtime
+        var nullableTypeDef = new TypeReference("System", "Nullable`1", module, systemRuntimeRef, true);
+        nullableTypeDef = module.ImportReference(nullableTypeDef);
+        var nullablePngColorType = new GenericInstanceType(nullableTypeDef);
         nullablePngColorType.GenericArguments.Add(pngColorTypeType);
-        nullablePngColorType = (GenericInstanceType)module.ImportReference(nullablePngColorType);
         
         // Add new local variable to avoid conflicts with existing variables
         // The second occurrence of the pattern uses loc.2 for PngMetadata, so we need different variables here
@@ -281,11 +282,9 @@ public static class MyImagePrepatch
         
         var pngBitDepthType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngBitDepth", module, sixLaborsImageSharpScope, true));
         
-        // Create Nullable<PngBitDepth> using the same System.Runtime assembly reference
-        var nullableTypeRefBitDepth = new TypeReference("System", "Nullable`1", module, systemRuntimeRef, true);
-        var nullablePngBitDepth = new GenericInstanceType(nullableTypeRefBitDepth);
+        // Create Nullable<PngBitDepth> using the same properly imported Nullable type definition
+        var nullablePngBitDepth = new GenericInstanceType(nullableTypeDef);
         nullablePngBitDepth.GenericArguments.Add(pngBitDepthType);
-        nullablePngBitDepth = (GenericInstanceType)module.ImportReference(nullablePngBitDepth);
         var getBitDepthMethod = new MethodReference("get_BitDepth", nullablePngBitDepth, pngMetadataType) { HasThis = true };
         var getBitDepthValueOrDefaultMethod = new MethodReference("GetValueOrDefault", pngBitDepthType, nullablePngBitDepth) { HasThis = true };
         
@@ -319,6 +318,79 @@ public static class MyImagePrepatch
             i++;
         }
         
+        il.RecordPatchedCode(method);
+    }
+
+    private static void PatchSaveStream(ModuleDefinition module, TypeDefinition type)
+    {
+        // Find the Save<TPixel>(Stream, FileFormat, IntPtr, int, Vector2I, uint) method
+        var method = type.Methods.FirstOrDefault(m =>
+            m.Name == "Save" &&
+            m.IsGenericInstance == false &&
+            m.HasGenericParameters &&
+            m.GenericParameters.Count == 1 &&
+            m.Parameters.Count == 6 &&
+            m.Parameters[0].ParameterType.Name == "Stream");
+        
+        if (method == null)
+        {
+            Debug.WriteLine("Warning: Could not find Save<TPixel> method for patching");
+            return;
+        }
+
+        var il = method.Body.Instructions;
+        il.RecordOriginalCode(method);
+
+        var sixLaborsImageSharpScope = module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp");
+
+        // Find and fix SaveAsBmp, SaveAsPng, SaveAsJpeg calls
+        // These are extension methods in SixLabors.ImageSharp.ImageExtensions
+        // The API signature may have changed, but the methods should still exist
+        
+        foreach (var instruction in il)
+        {
+            if (instruction.OpCode == OpCodes.Callvirt && instruction.Operand is MethodReference mr)
+            {
+                // Check if it's one of the Save methods that might need updating
+                if (mr.Name == "SaveAsBmp" || mr.Name == "SaveAsPng" || mr.Name == "SaveAsJpeg")
+                {
+                    // The methods are now extension methods in ImageExtensions class
+                    // Convert from instance method to static extension method call
+                    var imageExtensionsType = new TypeReference("SixLabors.ImageSharp", "ImageExtensions", module, sixLaborsImageSharpScope, false);
+                    
+                    // Get the TPixel generic parameter from the original method reference
+                    var genericImageType = mr.DeclaringType as GenericInstanceType;
+                    if (genericImageType != null && genericImageType.GenericArguments.Count > 0)
+                    {
+                        var tPixelType = genericImageType.GenericArguments[0];
+                        
+                        // Create new static extension method reference
+                        var newSaveMethod = new MethodReference(mr.Name, module.TypeSystem.Void, imageExtensionsType);
+                        newSaveMethod.Parameters.Add(new ParameterDefinition(mr.DeclaringType));
+                        foreach (var param in mr.Parameters)
+                        {
+                            newSaveMethod.Parameters.Add(param);
+                        }
+                        
+                        // Make it a generic method if needed
+                        if (method.HasGenericParameters)
+                        {
+                            var genericMethod = new GenericInstanceMethod(newSaveMethod);
+                            genericMethod.GenericArguments.Add(tPixelType);
+                            instruction.Operand = module.ImportReference(genericMethod);
+                        }
+                        else
+                        {
+                            instruction.Operand = module.ImportReference(newSaveMethod);
+                        }
+                        
+                        // Change from callvirt to call since it's now a static method
+                        instruction.OpCode = OpCodes.Call;
+                    }
+                }
+            }
+        }
+
         il.RecordPatchedCode(method);
     }
 
