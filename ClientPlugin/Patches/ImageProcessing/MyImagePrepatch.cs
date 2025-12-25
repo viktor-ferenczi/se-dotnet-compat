@@ -166,12 +166,12 @@ public static class MyImagePrepatch
         il.Insert(i++, Instruction.Create(OpCodes.Stloc, nullableColorTypeVar));
         il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, nullableColorTypeVar));
         var getValueOrDefaultMethod = new MethodReference("GetValueOrDefault", pngColorTypeType, nullablePngColorType) { HasThis = true };
-        il.Insert(i++, Instruction.Create(OpCodes.Call, getValueOrDefaultMethod));
+        il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getValueOrDefaultMethod)));
         il.Insert(i++, Instruction.Create(OpCodes.Ldc_I4_0));
         il.Insert(i++, Instruction.Create(OpCodes.Ceq));
         il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, nullableColorTypeVar));
         var getHasValueMethod = new MethodReference("get_HasValue", module.TypeSystem.Boolean, nullablePngColorType) { HasThis = true };
-        il.Insert(i++, Instruction.Create(OpCodes.Call, getHasValueMethod));
+        il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getHasValueMethod)));
         il.Insert(i++, Instruction.Create(OpCodes.And));
         il.Insert(i++, Instruction.Create(OpCodes.Starg_S, method.Parameters.First(p => p.Name == "oneChannel")));
         var size = i - start;
@@ -259,7 +259,7 @@ public static class MyImagePrepatch
                 il.Insert(pos++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getColorTypeMethod)));
                 il.Insert(pos++, Instruction.Create(OpCodes.Stloc, tempNullableVar));
                 il.Insert(pos++, Instruction.Create(OpCodes.Ldloca_S, tempNullableVar));
-                il.Insert(pos++, Instruction.Create(OpCodes.Call, getValueOrDefaultMethod));
+                il.Insert(pos++, Instruction.Create(OpCodes.Call, module.ImportReference(getValueOrDefaultMethod)));
                 il.Insert(pos++, Instruction.Create(OpCodes.Brtrue_S, branchTarget));
                 
                 break; // Only one such pattern
@@ -310,7 +310,7 @@ public static class MyImagePrepatch
                 il.Insert(pos++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getBitDepthMethod)));
                 il.Insert(pos++, Instruction.Create(OpCodes.Stloc, tempNullableBitDepthVar));
                 il.Insert(pos++, Instruction.Create(OpCodes.Ldloca_S, tempNullableBitDepthVar));
-                il.Insert(pos++, Instruction.Create(OpCodes.Call, getBitDepthValueOrDefaultMethod));
+                il.Insert(pos++, Instruction.Create(OpCodes.Call, module.ImportReference(getBitDepthValueOrDefaultMethod)));
                 il.Insert(pos++, Instruction.Create(OpCodes.Stloc_1));
                 
                 break; // Only one such pattern
@@ -343,50 +343,22 @@ public static class MyImagePrepatch
 
         var sixLaborsImageSharpScope = module.AssemblyReferences.First(r => r.Name == "SixLabors.ImageSharp");
 
-        // Find and fix SaveAsBmp, SaveAsPng, SaveAsJpeg calls
-        // These are extension methods in SixLabors.ImageSharp.ImageExtensions
-        // The API signature may have changed, but the methods should still exist
+        // The Save extension methods (SaveAsBmp, SaveAsPng, SaveAsJpeg) already use 'call' opcode in the original IL,
+        // so they're already static extension methods. We just need to ensure they're properly imported.
+        // In newer versions of ImageSharp, these methods may have different signatures or be in different locations.
+        // For now, we'll re-import them to ensure proper assembly references.
         
         foreach (var instruction in il)
         {
-            if (instruction.OpCode == OpCodes.Callvirt && instruction.Operand is MethodReference mr)
+            if ((instruction.OpCode == OpCodes.Call || instruction.OpCode == OpCodes.Callvirt) && 
+                instruction.Operand is MethodReference mr)
             {
                 // Check if it's one of the Save methods that might need updating
-                if (mr.Name == "SaveAsBmp" || mr.Name == "SaveAsPng" || mr.Name == "SaveAsJpeg")
+                if ((mr.Name == "SaveAsBmp" || mr.Name == "SaveAsPng" || mr.Name == "SaveAsJpeg") &&
+                    mr.DeclaringType.Name == "ImageExtensions")
                 {
-                    // The methods are now extension methods in ImageExtensions class
-                    // Convert from instance method to static extension method call
-                    var imageExtensionsType = new TypeReference("SixLabors.ImageSharp", "ImageExtensions", module, sixLaborsImageSharpScope, false);
-                    
-                    // Get the TPixel generic parameter from the original method reference
-                    var genericImageType = mr.DeclaringType as GenericInstanceType;
-                    if (genericImageType != null && genericImageType.GenericArguments.Count > 0)
-                    {
-                        var tPixelType = genericImageType.GenericArguments[0];
-                        
-                        // Create new static extension method reference
-                        var newSaveMethod = new MethodReference(mr.Name, module.TypeSystem.Void, imageExtensionsType);
-                        newSaveMethod.Parameters.Add(new ParameterDefinition(mr.DeclaringType));
-                        foreach (var param in mr.Parameters)
-                        {
-                            newSaveMethod.Parameters.Add(param);
-                        }
-                        
-                        // Make it a generic method if needed
-                        if (method.HasGenericParameters)
-                        {
-                            var genericMethod = new GenericInstanceMethod(newSaveMethod);
-                            genericMethod.GenericArguments.Add(tPixelType);
-                            instruction.Operand = module.ImportReference(genericMethod);
-                        }
-                        else
-                        {
-                            instruction.Operand = module.ImportReference(newSaveMethod);
-                        }
-                        
-                        // Change from callvirt to call since it's now a static method
-                        instruction.OpCode = OpCodes.Call;
-                    }
+                    // Re-import the method reference to ensure proper assembly resolution
+                    instruction.Operand = module.ImportReference(mr);
                 }
             }
         }
@@ -479,10 +451,10 @@ public static class MyImagePrepatch
             // 2. Single()
             // 3. get_Span
 
-            il[i].Operand = getPixelMemoryGroupGeneric;
+            il[i].Operand = module.ImportReference(getPixelMemoryGroupGeneric);
 
             // Insert Single() call after GetPixelMemoryGroup
-            il.Insert(i + 1, Instruction.Create(OpCodes.Call, singleMethodGeneric));
+            il.Insert(i + 1, Instruction.Create(OpCodes.Call, module.ImportReference(singleMethodGeneric)));
 
             // Insert get_Span call (needs ldloca for value type)
             // Actually, Single returns Memory<T> by value, so we need to store it, get address, then call get_Span
@@ -494,7 +466,7 @@ public static class MyImagePrepatch
             // After Single(), store result in local, load address, call get_Span
             il.Insert(i + 2, Instruction.Create(OpCodes.Stloc, memoryLocal));
             il.Insert(i + 3, Instruction.Create(OpCodes.Ldloca, memoryLocal));
-            il.Insert(i + 4, Instruction.Create(OpCodes.Call, getSpanMethod));
+            il.Insert(i + 4, Instruction.Create(OpCodes.Call, module.ImportReference(getSpanMethod)));
 
             break; // Only one GetPixelSpan call in this method
         }
