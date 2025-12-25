@@ -138,26 +138,33 @@ public static class MyImagePrepatch
         var nullablePngColorType = new GenericInstanceType(nullableTypeRef);
         nullablePngColorType.GenericArguments.Add(pngColorTypeType);
         
+        // Add new local variables to avoid conflicts with existing variables
+        // The second occurrence of the pattern uses loc.2 for PngMetadata, so we need different variables here
+        var nullableColorTypeVar = new VariableDefinition(nullablePngColorType);
+        var tempIntVar = new VariableDefinition(module.TypeSystem.Int32);
+        method.Body.Variables.Add(nullableColorTypeVar);
+        method.Body.Variables.Add(tempIntVar);
+        
         // Create method references with proper return types
         var getMetadataMethod = new MethodReference("get_Metadata", imageMetadataType, imageInfoType) { HasThis = true };
         var getPngMetadataMethod = new MethodReference("GetPngMetadata", pngMetadataType, metadataExtensionsType);
         getPngMetadataMethod.Parameters.Add(new ParameterDefinition(imageMetadataType));
         var getColorTypeMethod = new MethodReference("get_ColorType", nullablePngColorType, pngMetadataType) { HasThis = true };
         
-        // Insert IL instructions
+        // Insert IL instructions using the new local variables
         il.Insert(i++, Instruction.Create(OpCodes.Ldloc_0));
         il.Insert(i++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getMetadataMethod)));
         il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getPngMetadataMethod)));
         il.Insert(i++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getColorTypeMethod)));
-        il.Insert(i++, Instruction.Create(OpCodes.Stloc_2));
+        il.Insert(i++, Instruction.Create(OpCodes.Stloc, nullableColorTypeVar));
         il.Insert(i++, Instruction.Create(OpCodes.Ldc_I4_0));
-        il.Insert(i++, Instruction.Create(OpCodes.Stloc_3));
-        il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, method.Body.Variables[2]));
+        il.Insert(i++, Instruction.Create(OpCodes.Stloc, tempIntVar));
+        il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, nullableColorTypeVar));
         var getValueOrDefaultMethod = new MethodReference("GetValueOrDefault", pngColorTypeType, nullablePngColorType) { HasThis = true };
         il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getValueOrDefaultMethod)));
-        il.Insert(i++, Instruction.Create(OpCodes.Ldloc_3));
+        il.Insert(i++, Instruction.Create(OpCodes.Ldloc, tempIntVar));
         il.Insert(i++, Instruction.Create(OpCodes.Ceq));
-        il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, method.Body.Variables[2]));
+        il.Insert(i++, Instruction.Create(OpCodes.Ldloca_S, nullableColorTypeVar));
         var getHasValueMethod = new MethodReference("get_HasValue", module.TypeSystem.Boolean, nullablePngColorType) { HasThis = true };
         il.Insert(i++, Instruction.Create(OpCodes.Call, module.ImportReference(getHasValueMethod)));
         il.Insert(i++, Instruction.Create(OpCodes.And));
@@ -168,13 +175,10 @@ public static class MyImagePrepatch
         // First, fix any remaining get_MetaData calls (old API with uppercase 'D') to get_Metadata (new API with lowercase 'd')
         // This must be done BEFORE looking for the GetFormatMetaData pattern
         var newMetadataGetter = new MethodReference("get_Metadata", imageMetadataType, imageInfoType) { HasThis = true };
-        var newColorTypeGetter = new MethodReference("get_ColorType", nullablePngColorType, pngMetadataType) { HasThis = true };
         foreach (var ins in il)
         {
             if (ins.OpCode == OpCodes.Callvirt && ins.Operand is MethodReference mr1 && mr1.Name == "get_MetaData")
                 ins.Operand = module.ImportReference(newMetadataGetter);
-            if (ins.OpCode == OpCodes.Callvirt && ins.Operand is MethodReference mr2 && mr2.Name == "get_ColorType")
-                ins.Operand = module.ImportReference(newColorTypeGetter);
         }
 
         // AI generated:
@@ -210,6 +214,101 @@ public static class MyImagePrepatch
             
             // Insert GetPngMetadata call
             il.Insert(i, Instruction.Create(OpCodes.Call, module.ImportReference(getPngMetadataMethod)));
+        }
+        
+        // Fix the second occurrence's get_ColorType() call
+        // The new API returns Nullable<PngColorType>, but the original code does:
+        //   callvirt get_ColorType()  // returns PngColorType enum
+        //   brtrue.s label            // branches if value != 0 (not Grayscale)
+        // We need to replace it with:
+        //   callvirt get_ColorType()     // returns Nullable<PngColorType>
+        //   stloc.X
+        //   ldloca.s X
+        //   call GetValueOrDefault()      // returns 0 if no value, or the actual value
+        //   brtrue.s label                // branches if != 0
+        
+        // Find the pattern: stloc.2 followed by ldloc.2, callvirt get_ColorType, brtrue
+        i = 0;
+        while (i < il.Count - 3)
+        {
+            if (il[i].OpCode == OpCodes.Stloc_2 &&
+                il[i + 1].OpCode == OpCodes.Ldloc_2 &&
+                il[i + 2].OpCode == OpCodes.Callvirt &&
+                il[i + 2].Operand is MethodReference mr3 && mr3.Name == "get_ColorType" &&
+                il[i + 3].OpCode == OpCodes.Brtrue_S)
+            {
+                // Found the pattern at i, i+1, i+2, i+3
+                // We need to add instructions between get_ColorType and brtrue
+                var branchTarget = (Instruction)il[i + 3].Operand;
+                
+                // Add a local variable for the nullable
+                var tempNullableVar = new VariableDefinition(nullablePngColorType);
+                method.Body.Variables.Add(tempNullableVar);
+                
+                // Remove the old callvirt get_ColorType and brtrue (2 instructions at i+2 and i+3)
+                il.RemoveAt(i + 3); // Remove brtrue first
+                il.RemoveAt(i + 2); // Remove get_ColorType
+                
+                // Insert new instructions
+                var pos = i + 2;
+                il.Insert(pos++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getColorTypeMethod)));
+                il.Insert(pos++, Instruction.Create(OpCodes.Stloc, tempNullableVar));
+                il.Insert(pos++, Instruction.Create(OpCodes.Ldloca_S, tempNullableVar));
+                il.Insert(pos++, Instruction.Create(OpCodes.Call, module.ImportReference(getValueOrDefaultMethod)));
+                il.Insert(pos++, Instruction.Create(OpCodes.Brtrue_S, branchTarget));
+                
+                break; // Only one such pattern
+            }
+            i++;
+        }
+        
+        // Fix get_BitDepth() calls - the new API returns Nullable<PngBitDepth>
+        // Original pattern:
+        //   ldloc.2
+        //   callvirt get_BitDepth()  // returns PngBitDepth enum
+        //   stloc.1                  // store as byte
+        // New pattern:
+        //   ldloc.2
+        //   callvirt get_BitDepth()     // returns Nullable<PngBitDepth>
+        //   stloc.X                     // store nullable
+        //   ldloca.s X
+        //   call GetValueOrDefault()     // returns enum value
+        //   stloc.1                      // store as byte (after implicit conversion)
+        
+        var pngBitDepthType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngBitDepth", module, sixLaborsImageSharpScope, true));
+        var nullablePngBitDepth = new GenericInstanceType(nullableTypeRef);
+        nullablePngBitDepth.GenericArguments.Add(pngBitDepthType);
+        var getBitDepthMethod = new MethodReference("get_BitDepth", nullablePngBitDepth, pngMetadataType) { HasThis = true };
+        var getBitDepthValueOrDefaultMethod = new MethodReference("GetValueOrDefault", pngBitDepthType, nullablePngBitDepth) { HasThis = true };
+        
+        i = 0;
+        while (i < il.Count - 2)
+        {
+            if (il[i].OpCode == OpCodes.Ldloc_2 &&
+                il[i + 1].OpCode == OpCodes.Callvirt &&
+                il[i + 1].Operand is MethodReference mr4 && mr4.Name == "get_BitDepth" &&
+                il[i + 2].OpCode == OpCodes.Stloc_1)
+            {
+                // Found the pattern at i, i+1, i+2
+                // Add a local variable for the nullable
+                var tempNullableBitDepthVar = new VariableDefinition(nullablePngBitDepth);
+                method.Body.Variables.Add(tempNullableBitDepthVar);
+                
+                // Remove the old callvirt and stloc (2 instructions at i+1 and i+2)
+                il.RemoveAt(i + 2); // Remove stloc.1
+                il.RemoveAt(i + 1); // Remove get_BitDepth
+                
+                // Insert new instructions
+                var pos = i + 1;
+                il.Insert(pos++, Instruction.Create(OpCodes.Callvirt, module.ImportReference(getBitDepthMethod)));
+                il.Insert(pos++, Instruction.Create(OpCodes.Stloc, tempNullableBitDepthVar));
+                il.Insert(pos++, Instruction.Create(OpCodes.Ldloca_S, tempNullableBitDepthVar));
+                il.Insert(pos++, Instruction.Create(OpCodes.Call, module.ImportReference(getBitDepthValueOrDefaultMethod)));
+                il.Insert(pos++, Instruction.Create(OpCodes.Stloc_1));
+                
+                break; // Only one such pattern
+            }
+            i++;
         }
         
         il.RecordPatchedCode(method);
