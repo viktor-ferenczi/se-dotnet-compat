@@ -26,6 +26,7 @@ public static class MyImagePrepatch
 
         // Patch the generic MyImage<TData> class
         var myImageGenericType = module.GetTypes().First(t => t.FullName.StartsWith("VRage.Render.Image.MyImage`1"));
+        ReplaceTypes(module, myImageGenericType);
         PatchCreateStream(module, myImageGenericType);
     }
 
@@ -132,7 +133,9 @@ public static class MyImagePrepatch
         var metadataExtensionsType = module.ImportReference(new TypeReference("SixLabors.ImageSharp", "MetadataExtensions", module, sixLaborsImageSharpScope, false));
         var pngMetadataType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngMetadata", module, sixLaborsImageSharpScope, false));
         var pngColorTypeType = module.ImportReference(new TypeReference("SixLabors.ImageSharp.Formats.Png", "PngColorType", module, sixLaborsImageSharpScope, true));
-        var nullableTypeRef = module.ImportReference(new TypeReference("System", "Nullable`1", module, module.TypeSystem.CoreLibrary, true));
+        
+        // Create Nullable<PngColorType> using proper generic instantiation
+        var nullableTypeRef = new TypeReference("System", "Nullable`1", module, module.TypeSystem.CoreLibrary, true);
         var nullablePngColorType = new GenericInstanceType(nullableTypeRef);
         nullablePngColorType.GenericArguments.Add(pngColorTypeType);
         
