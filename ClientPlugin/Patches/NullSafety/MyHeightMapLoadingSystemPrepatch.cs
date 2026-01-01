@@ -20,6 +20,7 @@ public static class MyHeightMapLoadingSystemPrepatch
         var il = methodBody.Instructions;
 
         il.RecordOriginalCode(method);
+        il.VerifyCodeHash(method, "62847c5b");
 
         // The maps can already be set to null during unload
         // If maps == null, then skip to the ret instruction at the end of method

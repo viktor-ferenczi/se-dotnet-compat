@@ -21,6 +21,7 @@ public static class MyGuiScreenMainMenuBasePatch
     {
         var il = instructions.ToList();
         il.RecordOriginalCode(patchedMethod);
+        il.VerifyCodeHash(patchedMethod, "ae099828");
 
         // Find the index of the String.Concat call that constructs the version text
         var concatIndex = il.FindIndex(ci => ci.opcode == OpCodes.Call &&

@@ -20,6 +20,7 @@ public static class MyInitializerPatch
     {
         var il = instructions.ToList();
         il.RecordOriginalCode(patchedMethod);
+        il.VerifyCodeHash(patchedMethod, "0561eef4");
 
         var setNameIndex = il.FindIndex(i => i.opcode == OpCodes.Callvirt && (i.operand?.ToString() ?? "").Contains("set_Name"));
         Debug.Assert(setNameIndex != -1, "Could not find set_Name");

@@ -13,8 +13,6 @@ using Mono.Collections.Generic;
 
 namespace ClientPlugin.Tools;
 
-// Useful methods for preloader patches using Mono.Cecil.
-// For usage examples, see the various *Prepatch.cs files.
 public static class PreloaderHelpers
 {
     public delegate bool CodeInstructionPredicate(Instruction ci);
@@ -51,7 +49,10 @@ public static class PreloaderHelpers
     public static void VerifyCodeHash(this Collection<Instruction> il, MethodDefinition patchedMethod, string expected)
     {
         var actual = il.Hash();
-        if (actual != expected) throw new Exception($"Prepatch: Detected code change in {patchedMethod.Name}: actual {actual}, expected {expected}");
+        if (actual != expected)
+        {
+            throw new Exception($"Prepatch: Detected code change in {patchedMethod.Name}: expected {expected}, actual {actual}");
+        }
     }
 
     private static string FormatCode(this Collection<Instruction> instructions)
@@ -253,7 +254,7 @@ public static class PreloaderHelpers
             ? callerMemberName.EndsWith("Prepatch")
                 ? callerMemberName.Substring(0, callerMemberName.Length - "Prepatch".Length)
                 : callerMemberName
-            : method.DeclaringType.Name.Split("`")[0] + "." + method.Name.Replace(".ctor", "Constructor").Replace(".cctor", "StaticConstructor");
+            : method.DeclaringType.Name.Split('`')[0] + "." + method.Name.Replace(".ctor", "Constructor").Replace(".cctor", "StaticConstructor");
 
         var path = Path.Combine(dir, $"{name}.{suffix}.il");
 

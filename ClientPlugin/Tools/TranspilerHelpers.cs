@@ -13,9 +13,6 @@ using HarmonyLib;
 
 namespace ClientPlugin.Tools;
 
-// Useful methods in transpiler patches.
-// For usage examples please search this repo:
-// https://github.com/viktor-ferenczi/performance-improvements
 public static class TranspilerHelpers
 {
     private static readonly bool DisableCodeValidations = (Environment.GetEnvironmentVariable("SE_PLUGIN_DISABLE_METHOD_VERIFICATION") ?? "0") != "0";
@@ -90,7 +87,10 @@ public static class TranspilerHelpers
     public static void VerifyCodeHash(this List<CodeInstruction> il, MethodBase patchedMethod, string expected)
     {
         var actual = il.Hash();
-        if (actual != expected && !DisableCodeValidations) throw new Exception($"Detected code change in {patchedMethod.Name}: actual {actual}, expected {expected}");
+        if (actual != expected && !DisableCodeValidations)
+        {
+            throw new Exception($"Detected code change in {patchedMethod.Name}: expected {expected}, actual {actual}");
+        }
     }
 
     private static string FormatCode(this List<CodeInstruction> il)
@@ -210,7 +210,7 @@ public static class TranspilerHelpers
             ? callerMemberName.EndsWith("Transpiler")
                 ? callerMemberName.Substring(0, callerMemberName.Length - "Transpiler".Length)
                 : callerMemberName
-            : (patchedMethod.DeclaringType?.Name ?? "NA").Split("`")[0] + "." + patchedMethod.Name.Replace(".ctor", "Constructor").Replace(".cctor", "StaticConstructor");
+            : (patchedMethod.DeclaringType?.Name ?? "NA").Split('`')[0] + "." + patchedMethod.Name.Replace(".ctor", "Constructor").Replace(".cctor", "StaticConstructor");
 
         var path = Path.Combine(dir, $"{name}.{suffix}.il");
 

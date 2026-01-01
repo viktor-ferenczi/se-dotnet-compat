@@ -19,6 +19,7 @@ public static class MyPlatformAudioPatch
     {
         var il = instructions.ToList();
         il.RecordOriginalCode(patchedMethod);
+        il.VerifyCodeHash(patchedMethod, "3bbf9165");
 
         // Change XAudio2Version.Version29 to XAudio2Version.Default
         // Replace ldc.i4.3 with ldc.i4.0

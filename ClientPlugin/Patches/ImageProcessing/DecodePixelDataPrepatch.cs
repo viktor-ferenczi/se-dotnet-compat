@@ -27,6 +27,7 @@ public static class DecodePixelDataPrepatch
 
         var il = method.Body.Instructions;
         il.RecordOriginalCode(method);
+        il.VerifyCodeHash(method, "8e787d98");
 
         // Target is the first instruction in the method
         var target = il[1];

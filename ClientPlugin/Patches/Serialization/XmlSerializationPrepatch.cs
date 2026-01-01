@@ -30,6 +30,7 @@ public static class XmlSerializationPrepatch
         var il = body.Instructions;
 
         il.RecordOriginalCode(method);
+        il.VerifyCodeHash(method, "c8bac690");
 
         //- m_target.WriteAttributeString("xsi:type", m_customRootType);
         //+ m_target.WriteAttributeString("xsi", "type", XSI_NS_URL, m_customRootType);
@@ -90,6 +91,7 @@ public static class XmlSerializationPrepatch
         var il = body.Instructions;
 
         il.RecordOriginalCode(method);
+        il.VerifyCodeHash(method, "320acfb0");
 
         //- return reader.GetAttribute("xsi:type");
         //+ return reader.GetAttribute("type", XSI_NS_URL);
