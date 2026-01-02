@@ -57,7 +57,7 @@ public static class Preloader
 
     // ReSharper disable once UnusedMember.Global
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    public static void Hook()
+    public static void Finish()
     {
         // Enabling BinaryFormatter. This may not work on .Net 9
         // See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
