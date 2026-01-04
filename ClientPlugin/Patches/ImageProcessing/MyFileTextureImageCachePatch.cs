@@ -14,14 +14,22 @@ public static class MyFileTextureImageCachePatch
     // ReSharper disable once UnusedMember.Local
     private static bool LoadImagePrefix(ref string filepath)
     {
-        // Handle .zip files by replacing extension with .dds
+        // Handle .zip files by replacing extension with .dds if the DDS file exists
         if (filepath.ToLower().EndsWith(".zip"))
         {
-            filepath = filepath.Substring(0, filepath.Length - 4) + ".dds";
-            if (!File.Exists(filepath)) throw new Exception($"DDS file extracted from ZIP is missing: {filepath}");
+            string ddsPath = filepath.Substring(0, filepath.Length - 4) + ".dds";
+            if (File.Exists(ddsPath))
+            {
+                filepath = ddsPath;
+            }
+            else
+            {
+                // DDS doesn't exist, return false to skip loading and use missing texture fallback
+                return false;
+            }
         }
 
-        // Run the original with the potentially update filepath
+        // Run the original with the potentially updated filepath
         return true;
     }
 }
