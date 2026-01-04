@@ -34,13 +34,14 @@ Runtime patching:
 - Writing pre-patches or transpiler patches is harder because they depend on the IL code from the original game assemblies, which can only be obtained while running the game or by decompiling the game DLLs. Use transpiler patches only if absolutely required.
 - Transpiler patches can be best understood by logging the original and modified IL code in separate files. This can be done by the `RecordOriginalCode` and `RecordPatchedCode` methods of the `TranspilerHelpers` class. However, capturing IL code requires running the game to capture this information. Use it wisely, ask the developer for assistance with running the game to get to the original IL code and to verify your changes. Writing transpiler patches requires systematic iteration. Never extend the plugin's `Init` method with explicit `harmony.Patch` calls. It is enough to decorate the static patch classes with `[HarmonyPatch]` or `[HarmonyPatch(type(ClassToPatch))]`, then properly write its members.
 - Pre-patching is done before loading the game DLLs. Therefore, pre-patches cannot depend on them. Use pre-patching only if you must modify code which is then later inlined by the JIT compiler, which prevents changing such code by transpiler patches. You must also use pre-patches if you want to replace entire interfaces, classes or structs.
-- If your code needs to access internal, protected or private members, then you likely want to enable the use of the Krafs publicizer in the project to avoid writing reflections. You can enable the publicizer by uncommenting the project file and C# code blocks marked with comments with "Uncomment to enable publicizer support" in them. Make sure not to miss any of those.
+- If your code needs to access internal, protected or private members, then you need to use the Krafs publicizer.
+- If you use the Krafs publicizer, then make sure that the `<Publicize>` entires in the project file are ALWAYS in sync with the `IgnoresAccessChecksTo` entires in the C# code (`GameAssembliesToPublicize.cs` file).
+- If the plugin's build process reports ambiguity errors on the use of publicized symbols (typically events, but can be other symbols as well), then ignore those symbols from publicization by adding a `<DoNotPublicize>` entry for each of them in the project file.
 
 Folder structure:
 - `.run`: JetBrains Rider run configurations (for convenience)
 - `Docs`: Images linked from the README file or any further documentation should go here.
 - `ClientPlugin`: Pulsar builds only the source code under this folder or its subdirectories. You can find plugin initialization, configuration and logging directly in this folder.
-- `ClientPlugin/Settings`: Reusable configuration dialog components. See `Config.cs` in the project directory on usage examples.
 - `ClientPlugin/Tools`: Utility code for transpiler patches. Code to uncomment if you need to use publicizer to access internal, protected or private members in the original game code (optional).
 - `ClientPlugin/Patches`: Use this folder and namespace to host the Harmony patches. 
 
