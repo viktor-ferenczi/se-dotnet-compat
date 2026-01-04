@@ -8,12 +8,14 @@
     <Author>Viktor</Author>
 
     <Tooltip>Compatibility with .NET 8.0</Tooltip>
-    <Description>Support plugin for Pulsar to start the game on the .NET 8.0 runtime.</Description>
+    <Description>Support plugin for Pulsar to run the game on .NET 8.0.</Description>
 
     <SourceDirectories>
         <Directory>ClientPlugin</Directory>
     </SourceDirectories>
 
+    <Runtimes>NETCoreApp</Runtimes>
+    
     <Commit>TODO</Commit>
 
 </PluginData>
