@@ -1,15 +1,15 @@
 """
 Replaces project GUIDs and renames the solution
-Requires Python 3.12 or newer.
+Tested on Python 3.9, should work on any recent 3.x
 """
 
 import json
 import os
 import re
+import typing
 import uuid
 import winreg
 import xml.etree.ElementTree as ET
-from typing import Iterator, Tuple
 
 DRY_RUN = False
 
@@ -84,9 +84,9 @@ def _rename_project(name: str) -> None:
         "A061FC6C-713E-42CD-B413-151AC8A5074C": _generate_guid().upper(),
     }
 
-    def iter_paths() -> Iterator[Tuple[str, str]]:
+    def iter_paths() -> typing.Iterator[tuple[str, str]]:
         print("Solution:")
-        for filename in (f'{TEMPLATE_NAME}.sln', f'{TEMPLATE_NAME}.xml'):
+        for filename in (f'{TEMPLATE_NAME}.sln', f'{TEMPLATE_NAME}.sln.DotSettings.user', f'{TEMPLATE_NAME}.xml'):
             if os.path.exists(filename):
                 yield filename, filename
 

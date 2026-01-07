@@ -1,8 +1,17 @@
 ﻿using System.Runtime.CompilerServices;
 
-/* Uncomment to enable publicizer support, extend with the game assemblies you need to publicize
+// Assemblies that need to be publicized for accessing internal/protected/private members
+// Used by Harmony patches in this plugin
 
 [assembly: IgnoresAccessChecksTo("Sandbox.Game")]
+[assembly: IgnoresAccessChecksTo("Sandbox.Graphics")]
+[assembly: IgnoresAccessChecksTo("Sandbox.ObjectBuilders")]
+[assembly: IgnoresAccessChecksTo("SpaceEngineers")]
 [assembly: IgnoresAccessChecksTo("SpaceEngineers.Game")]
-
-*/
+[assembly: IgnoresAccessChecksTo("VRage")]
+[assembly: IgnoresAccessChecksTo("VRage.Audio")]
+[assembly: IgnoresAccessChecksTo("VRage.EOS")]
+[assembly: IgnoresAccessChecksTo("VRage.Network")]
+[assembly: IgnoresAccessChecksTo("VRage.Platform.Windows")]
+[assembly: IgnoresAccessChecksTo("VRage.Render11")]
+[assembly: IgnoresAccessChecksTo("VRage.Scripting")]

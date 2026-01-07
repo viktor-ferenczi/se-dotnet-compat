@@ -175,7 +175,7 @@ public static class TranspilerHelpers
                 return d.ToString(CultureInfo.InvariantCulture);
 
             default:
-                return argument.ToString().Trim();
+                return argument.ToString()?.Trim() ?? "null";
         }
     }
 
