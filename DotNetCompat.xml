@@ -8,8 +8,8 @@
     <FriendlyName>DotNetCompat</FriendlyName>
     <Author>Viktor</Author>
 
-    <Tooltip>Compatibility with .NET 8.0</Tooltip>
-    <Description>Support plugin for Pulsar to run the game on .NET 8.0.
+    <Tooltip>Compatibility with .NET 10.0</Tooltip>
+    <Description>Support plugin for Pulsar to run the game on .NET 10.0.
         
 Do NOT add this plugin manually, it won't work.
 It is added by Pulsar automatically on demand.
@@ -21,6 +21,7 @@ It is added by Pulsar automatically on demand.
 
 	<NuGetReferences>
 		<PackageReference Include="System.Management" Version="4.5.0" />
+		<PackageReference Include="System.Formats.Nrbf" Version="10.0.1" />
 	</NuGetReferences>	
 
     <Runtimes>NETCoreApp</Runtimes>

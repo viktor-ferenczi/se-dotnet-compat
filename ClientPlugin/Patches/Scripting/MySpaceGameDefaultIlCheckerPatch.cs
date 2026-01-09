@@ -26,6 +26,16 @@ public static class MySpaceGameDefaultIlCheckerPatch
 {
     // ReSharper disable once UnusedMember.Local
     [HarmonyPrefix]
+    [HarmonyPatch("AllDeclaredMembers")]
+    private static bool AllDeclaredMembersPrefix(Type type, ref IEnumerable<MemberInfo> __result)
+    {
+        var members = type.GetMembers(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public);
+        __result = members.Where((Func<MemberInfo, bool>) (m => m is not Type && !MySpaceGameDefaultIlChecker.IsPropertyMethod(m)));
+        return false;
+    }
+    
+    // ReSharper disable once UnusedMember.Local
+    [HarmonyPrefix]
     [HarmonyPatch("AllowDefaultNamespaces")]
     private static bool AllowDefaultNamespacesPrefix(IMyWhitelistBatch handle)
     {
@@ -46,11 +56,11 @@ public static class MySpaceGameDefaultIlCheckerPatch
             typeof(PropertyChangingEventArgs), typeof(INotifyPropertyChanged), typeof(PropertyChangedEventHandler), typeof(PropertyChangedEventArgs));
         handle.AllowTypes(MyWhitelistTarget.ModApi, typeof(Stream), typeof(TextWriter), typeof(TextReader));
         handle.AllowMembers(MyWhitelistTarget.Both, typeof(MemberInfo).GetProperty("Name"));
-        handle.AllowMembers(MyWhitelistTarget.Both, typeof(Type).GetProperty("FullName"), typeof(Type).GetMethod("GetTypeFromHandle"), typeof(Type).GetMethod("GetFields", new Type[1] { typeof(BindingFlags) }), typeof(Type).GetMethod("IsEquivalentTo"), typeof(Type).GetMethod("op_Equality"), typeof(Type).GetMethod("ToString"));
+        handle.AllowMembers(MyWhitelistTarget.Both, typeof(Type).GetProperty("FullName"), typeof(Type).GetMethod("GetTypeFromHandle"), typeof(Type).GetMethod("GetFields", [typeof(BindingFlags)]), typeof(Type).GetMethod("IsEquivalentTo"), typeof(Type).GetMethod("op_Equality"), typeof(Type).GetMethod("ToString"));
         handle.AllowMembers(MyWhitelistTarget.Both, typeof(ValueType).GetMethod("Equals"), typeof(ValueType).GetMethod("GetHashCode"), typeof(ValueType).GetMethod("ToString"));
         handle.AllowMembers(MyWhitelistTarget.Both, typeof(Environment).GetProperty("CurrentManagedThreadId", BindingFlags.Static | BindingFlags.Public), typeof(Environment).GetProperty("NewLine", BindingFlags.Static | BindingFlags.Public), typeof(Environment).GetProperty("ProcessorCount", BindingFlags.Static | BindingFlags.Public));
         var type = typeof(Type).Assembly.GetType("System.RuntimeType");
-        handle.AllowMembers(MyWhitelistTarget.Both, type.GetMethod("GetFields", new Type[] { typeof(BindingFlags) }));
+        handle.AllowMembers(MyWhitelistTarget.Both, type.GetMethod("GetFields", [typeof(BindingFlags)]));
         handle.AllowMembers(MyWhitelistTarget.Both, (from m in MySpaceGameDefaultIlChecker.AllDeclaredMembers(typeof(Delegate))
             where m.Name != "CreateDelegate"
             select m).ToArray());
@@ -63,6 +73,6 @@ public static class MySpaceGameDefaultIlCheckerPatch
 
     public static bool StringExtensions_Contains(this string text, string testSequence, StringComparison comparison)
     {
-        return text.IndexOf(testSequence, comparison) != -1;
+        return text.Contains(testSequence, comparison);
     }
 }

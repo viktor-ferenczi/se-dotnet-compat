@@ -1,11 +1,11 @@
-# .NET 8.0 compatibility for Space Engineers
+# .NET 10.0 compatibility for Space Engineers
 
 Provides some of the performance benefits of the newer .NET runtime without having to recompile the game.
 
 ## Prerequisites
 
 - [Space Engineers](https://store.steampowered.com/app/244850/Space_Engineers/)
-- [.NET 8.0 Runtime or SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
+- [.NET 10.0 Runtime or SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 - [Pulsar](https://github.com/SpaceGT/Pulsar)
 
 ## How to use

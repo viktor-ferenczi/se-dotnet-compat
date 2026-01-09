@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net8.0-windows</TargetFramework>
+        <TargetFramework>net10.0-windows</TargetFramework>
         <OutputType>Library</OutputType>
         <RootNamespace>ClientPlugin</RootNamespace>
         <AssemblyName>DotNetCompat</AssemblyName>
@@ -10,8 +10,8 @@
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
         <!-- Default versions; override in Directory.Build.props  -->
-        <AssemblyVersion>8.0.0.0</AssemblyVersion>
-        <FileVersion>8.0.0.0</FileVersion>
+        <AssemblyVersion>10.0.0.0</AssemblyVersion>
+        <FileVersion>10.0.0.0</FileVersion>
 
         <!-- Default configuration if none supplied -->
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -215,12 +215,13 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Lib.Harmony" Version="2.3.6"/>
+        <PackageReference Include="Lib.Harmony" Version="2.4.2" />
         <PackageReference Include="Krafs.Publicizer" Version="2.3.0">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Mono.Cecil" Version="0.11.6"/>
+        <PackageReference Include="System.Formats.Nrbf" Version="10.0.1" />
         <PackageReference Include="System.Management" Version="4.5.0" />
     </ItemGroup>
 
@@ -265,4 +266,11 @@
     <PropertyGroup>
         <PostBuildEvent>call "$(MSBuildProjectDirectory)\Deploy.bat" "$(AssemblyName).dll" "$(MSBuildProjectDirectory)\$(OutputPath)$(TargetFramework)"</PostBuildEvent>
     </PropertyGroup>
+
+    <PropertyGroup>
+        <!-- Required for Serialization of List<MyGameInventoryItem> in VRage.GameServices.MyInventoryHelper -->
+        <!-- Deserialization is patched to use safer NrbfDecoder instead -->
+        <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
+    </PropertyGroup>
+    
 </Project>

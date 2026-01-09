@@ -5,8 +5,8 @@ using VRage.Plugins;
 #if !DEV_BUILD
 using System.Reflection;
 
-[assembly: AssemblyVersion("8.0.0.0")]
-[assembly: AssemblyFileVersion("8.0.0.0")]
+[assembly: AssemblyVersion("10.0.0.0")]
+[assembly: AssemblyFileVersion("10.0.0.0")]
 #endif
 
 namespace ClientPlugin;
