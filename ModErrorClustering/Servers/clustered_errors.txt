@@ -1,0 +1,180 @@
+
+===========================================
+CLUSTER #0
+===========================================
+AQD - Armored Thrusters (Deprecated) [1810920525]
+CoreParts/Armor.cs:1,21
+The type or namespace name 'Structure' does not exist in the namespace 'Scripts' (are you missing an assembly reference?)
+---
+AQD - Armored Thrusters (Deprecated) [1810920525]
+CoreParts/Armor.cs:2,21
+The type or namespace name 'Structure' does not exist in the namespace 'Scripts' (are you missing an assembly reference?)
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Terminal/QuickActionMenu/PropertyWheelMenu/PropertyWheelEntry.cs:6,13
+The type or namespace name 'Deployment' does not exist in the namespace 'System' (are you missing an assembly reference?)
+---
+STC 3.0 - Ganymede Tier Tech [3179433514]
+CoreParts/Tritanium_Armor.cs:1,21
+The type or namespace name 'Structure' does not exist in the namespace 'Scripts' (are you missing an assembly reference?)
+---
+STC 3.0 - Ganymede Tier Tech [3179433514]
+CoreParts/Tritanium_Armor.cs:2,21
+The type or namespace name 'Structure' does not exist in the namespace 'Scripts' (are you missing an assembly reference?)
+---
+STC 3.0 - Qarania Star Trek Mod [3061248306]
+CoreParts/Tritanium_Armor.cs:1,21
+The type or namespace name 'Structure' does not exist in the namespace 'Scripts' (are you missing an assembly reference?)
+---
+STC 3.0 - Qarania Star Trek Mod [3061248306]
+CoreParts/Tritanium_Armor.cs:2,21
+The type or namespace name 'Structure' does not exist in the namespace 'Scripts' (are you missing an assembly reference?)
+---
+STC 4.0 - Core Mod [3516346683]
+CoreParts/Tritanium_Armor.cs:1,21
+The type or namespace name 'Structure' does not exist in the namespace 'Scripts' (are you missing an assembly reference?)
+---
+STC 4.0 - Core Mod [3516346683]
+CoreParts/Tritanium_Armor.cs:2,21
+The type or namespace name 'Structure' does not exist in the namespace 'Scripts' (are you missing an assembly reference?)
+---
+STC 4.0 - Warp Drive [3531091054]
+WarpDrive/WarpSystem.cs:4,30
+The type or namespace name 'Lifetime' does not exist in the namespace 'System.Runtime.Remoting' (are you missing an assembly reference?)
+---
+Sigma Draconis: Dirk Engine [2324281041]
+NoFlyZone/NoFlyZonePartA.cs:15,30
+The type or namespace name 'Messaging' does not exist in the namespace 'System.Runtime.Remoting' (are you missing an assembly reference?)
+---
+WelderWall [3370792625]
+Math0424/WelderWall/Util/EasyTerminalControls.cs:1,16
+The type or namespace name 'VisualBasic' does not exist in the namespace 'Microsoft' (are you missing an assembly reference?)
+---
+
+===========================================
+CLUSTER #1
+===========================================
+AQD - Armored Thrusters (Deprecated) [1810920525]
+CoreParts/Armor.cs:42,19
+The name 'Light' does not exist in the current context
+---
+AQD - Armored Thrusters (Deprecated) [1810920525]
+CoreParts/MasterConfig.cs:12,12
+The name 'ArmorDefinitions' does not exist in the current context
+---
+STC 3.0 - Ganymede Tier Tech [3179433514]
+CoreParts/MasterConfig.cs:7,12
+The name 'PartDefinitions' does not exist in the current context
+---
+STC 3.0 - Ganymede Tier Tech [3179433514]
+CoreParts/MasterConfig.cs:19,3
+The name 'ArmorDefinitions' does not exist in the current context
+---
+STC 3.0 - Ganymede Tier Tech [3179433514]
+CoreParts/Tritanium_Armor.cs:37,19
+The name 'Heavy' does not exist in the current context
+---
+STC 3.0 - Qarania Star Trek Mod [3061248306]
+CoreParts/MasterConfig.cs:7,12
+The name 'PartDefinitions' does not exist in the current context
+---
+STC 3.0 - Qarania Star Trek Mod [3061248306]
+CoreParts/MasterConfig.cs:19,3
+The name 'ArmorDefinitions' does not exist in the current context
+---
+STC 3.0 - Qarania Star Trek Mod [3061248306]
+CoreParts/Tritanium_Armor.cs:289,19
+The name 'Heavy' does not exist in the current context
+---
+STC 4.0 - Core Mod [3516346683]
+CoreParts/MasterConfig.cs:7,12
+The name 'PartDefinitions' does not exist in the current context
+---
+STC 4.0 - Core Mod [3516346683]
+CoreParts/MasterConfig.cs:19,3
+The name 'ArmorDefinitions' does not exist in the current context
+---
+STC 4.0 - Core Mod [3516346683]
+CoreParts/Tritanium_Armor.cs:213,19
+The name 'Heavy' does not exist in the current context
+---
+
+===========================================
+CLUSTER #2
+===========================================
+Build Vision 3.0 [1697184408]
+BuildVision2/Input/SettingsMenu.cs:118,31
+Member 'double.Round(double)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Input/SettingsMenu.cs:126,42
+Member 'float.Round(float)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Input/SettingsMenu.cs:141,31
+Member 'double.Round(double)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Input/SettingsMenu.cs:142,31
+Member 'double.Round(double)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Input/SettingsMenu.cs:149,42
+Member 'float.Round(float)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Terminal/BlockData/BlockProperties/HsvColorProperty.cs:50,39
+Member 'float.Round(float)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Terminal/BlockData/BlockProperties/HsvColorProperty.cs:52,39
+Member 'float.Round(float)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Terminal/BlockData/BlockProperties/HsvColorProperty.cs:54,39
+Member 'float.Round(float)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+Build Vision 3.0 [1697184408]
+BuildVision2/Terminal/BlockData/SuperBlock/Subtypes/GyroAccessor.cs:37,31
+Member 'float.Round(float)' cannot be accessed with an instance reference; qualify it with a type name instead
+---
+[MIG] SpecCores 1.2.5 [2903447763]
+Scripts/Shared/Common.cs:112,23
+The call is ambiguous between the following methods or properties: 'Enumerable.FirstOrDefault<TSource>(IEnumerable<TSource>, TSource)' and 'Enumerable.FirstOrDefault<TSource>(IEnumerable<TSource>, Func<TSource, bool>)'
+---
+
+===========================================
+CLUSTER #3
+===========================================
+AQD - Armored Thrusters (Deprecated) [1810920525]
+CoreParts/Armor.cs:6,8
+The type or namespace name 'ArmorDefinition' could not be found (are you missing a using directive or an assembly reference?)
+---
+AQD - Armored Thrusters (Deprecated) [1810920525]
+CoreParts/Armor.cs:6,69
+The type or namespace name 'ArmorDefinition' could not be found (are you missing a using directive or an assembly reference?)
+---
+STC 3.0 - Ganymede Tier Tech [3179433514]
+CoreParts/Tritanium_Armor.cs:8,8
+The type or namespace name 'ArmorDefinition' could not be found (are you missing a using directive or an assembly reference?)
+---
+STC 3.0 - Ganymede Tier Tech [3179433514]
+CoreParts/Tritanium_Armor.cs:8,59
+The type or namespace name 'ArmorDefinition' could not be found (are you missing a using directive or an assembly reference?)
+---
+STC 3.0 - Qarania Star Trek Mod [3061248306]
+CoreParts/Tritanium_Armor.cs:8,8
+The type or namespace name 'ArmorDefinition' could not be found (are you missing a using directive or an assembly reference?)
+---
+STC 3.0 - Qarania Star Trek Mod [3061248306]
+CoreParts/Tritanium_Armor.cs:8,47
+The type or namespace name 'ArmorDefinition' could not be found (are you missing a using directive or an assembly reference?)
+---
+STC 4.0 - Core Mod [3516346683]
+CoreParts/Tritanium_Armor.cs:8,8
+The type or namespace name 'ArmorDefinition' could not be found (are you missing a using directive or an assembly reference?)
+---
+STC 4.0 - Core Mod [3516346683]
+CoreParts/Tritanium_Armor.cs:8,47
+The type or namespace name 'ArmorDefinition' could not be found (are you missing a using directive or an assembly reference?)
+---

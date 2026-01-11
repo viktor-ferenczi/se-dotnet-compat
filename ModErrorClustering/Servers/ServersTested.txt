@@ -1,0 +1,15 @@
+Tested by spawning on the following servers:
+
+[EU] Alehouse PVE Modded ConnectionString:steam://5.9.118.202:27032
+
+DE/EN Space-Engineers.de legacy ConnectionString:steam://188.40.17.181:27001
+
+Sigma Draconis (Expanse) - Remnants - Lobby ConnectionString:steam://38.107.232.37:27040
+Sigma Draconis (Expanse) - Remnants - Helios DR3 ConnectionString:steam://38.107.232.37:27041
+
+SkunkWorks 4.0 Lobby ConnectionString:steam://68.132.49.53:28000
+
+STC4 Federation 1 ConnectionString:steam://142.127.79.145:27261
+
+Stone Industries ConnectionString:steam://68.132.49.53:27016
+Auroria Planet ConnectionString:steam://68.132.49.53:27012
