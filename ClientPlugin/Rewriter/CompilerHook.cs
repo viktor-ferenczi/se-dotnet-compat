@@ -24,24 +24,36 @@ static class CreateCompilation_Prefix
         if (scripts != null)
         {
             CSharpParseOptions parseOptions = __instance.m_conditionalParseOptions.WithPreprocessorSymbols(__instance.m_conditionalCompilationSymbols);
-            syntaxTrees = scripts.Select((Script s) => GetRewrittenTree(__instance, parseOptions, s));
+            syntaxTrees = GetRewrittenTrees(__instance, [.. scripts], parseOptions, options);
         }
         __result = CSharpCompilation.Create(MyScriptCompiler.MakeAssemblyName(assemblyFileName), syntaxTrees, __instance.m_metadataReferences, options);
         return false;
     }
 
-    public static SyntaxTree GetRewrittenTree(MyScriptCompiler __instance, CSharpParseOptions options, Script s)
+    public static IEnumerable<SyntaxTree> GetRewrittenTrees(MyScriptCompiler __instance, List<Script> scripts, CSharpParseOptions parseOptions, CSharpCompilationOptions options)
     {
-        var tree = CSharpSyntaxTree.ParseText(s.Code, options, s.Name, Encoding.UTF8);
+        List<SyntaxTree> initialTrees = [.. scripts.Select((Script s) => CSharpSyntaxTree.ParseText(s.Code, parseOptions, s.Name, Encoding.UTF8))];
+        var analysisCompilation = CSharpCompilation.Create("compat-analysis-compilation", initialTrees, __instance.m_metadataReferences, options);
 
-        var root = tree.GetRoot();
-        var rewriter = new RemoveUsingRewriter();
-        var newRoot = rewriter.Visit(root);
+        // Scan for clashing extension methods
+        HashSet<IMethodSymbol> conflicts = [];
+        foreach (var tree in initialTrees)
+        {
+            var model = analysisCompilation.GetSemanticModel(tree);
+            var collector = new ConflictingExtensionCollector(model);
+            collector.Visit(tree.GetRoot());
 
-        return CSharpSyntaxTree.Create(
-            (CSharpSyntaxNode)newRoot,
-            options,
-            s.Name,
-            Encoding.UTF8);
+            conflicts.UnionWith(collector.Conflicts);
+        }
+
+        // Replace bad usings (FIXME: use MyScriptManager.m_compatibilityChanges)
+        initialTrees = [.. initialTrees.Select(tree => {
+            var root = tree.GetRoot();
+            var rewriter = new RemoveUsingRewriter();
+            var newRoot = rewriter.Visit(root);
+            return CSharpSyntaxTree.Create((CSharpSyntaxNode)newRoot, parseOptions, tree.FilePath, Encoding.UTF8);;
+        })];
+
+        return initialTrees;
     }
 }
