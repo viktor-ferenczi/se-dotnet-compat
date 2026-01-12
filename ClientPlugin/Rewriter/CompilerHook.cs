@@ -34,23 +34,42 @@ static class CreateCompilation_Prefix
     {
         List<SyntaxTree> initialTrees = [.. scripts.Select((Script s) => CSharpSyntaxTree.ParseText(s.Code, parseOptions, s.Name, Encoding.UTF8))];
         var analysisCompilation = CSharpCompilation.Create("compat-analysis-compilation", initialTrees, __instance.m_metadataReferences, options);
+        
+        // FIXME: Return now if the compilation succeeds (find a way to pass it through as well to prevent double work)
+        
+        Dictionary<SyntaxTree, SemanticModel> initialTreeInfo = initialTrees.ToDictionary(tree => tree, tree => analysisCompilation.GetSemanticModel(tree));
 
         // Scan for clashing extension methods
-        HashSet<IMethodSymbol> conflicts = [];
+        Dictionary<IMethodSymbol, List<IMethodSymbol>> conflicts = [];
         foreach (var tree in initialTrees)
         {
-            var model = analysisCompilation.GetSemanticModel(tree);
-            var collector = new ConflictingExtensionCollector(model);
+            var model = initialTreeInfo[tree];
+            var collector = new ConflictingExtensionCollector(model, conflicts);
             collector.Visit(tree.GetRoot());
-
-            conflicts.UnionWith(collector.Conflicts);
         }
+
+        // These will replace the tree objects and break the above dictionaries
+        // ORDER OF EXECUTION MATTERS!
+
+        // Fix clashing extension methods
+        initialTrees = [.. initialTrees.Select(tree => {
+            var model = initialTreeInfo[tree];
+            var rewriter = new ConflictingExtensionRewriter(model, conflicts);
+            var newRoot = rewriter.Visit(tree.GetRoot());
+            return CSharpSyntaxTree.Create((CSharpSyntaxNode)newRoot, parseOptions, tree.FilePath, Encoding.UTF8);;
+        })];
+
+    //    System.IO.File.WriteAllText(
+    //System.IO.Path.Combine(
+    //    System.Environment.GetFolderPath(
+    //        System.Environment.SpecialFolder.UserProfile),
+    //    "Downloads\\dump.txt"),
+    //initialTrees.Where(x=>x.FilePath.Contains("SettingsMenu.cs") && x.FilePath.Contains("Input")).First().GetRoot().ToString());
 
         // Replace bad usings (FIXME: use MyScriptManager.m_compatibilityChanges)
         initialTrees = [.. initialTrees.Select(tree => {
-            var root = tree.GetRoot();
             var rewriter = new RemoveUsingRewriter();
-            var newRoot = rewriter.Visit(root);
+            var newRoot = rewriter.Visit(tree.GetRoot());
             return CSharpSyntaxTree.Create((CSharpSyntaxNode)newRoot, parseOptions, tree.FilePath, Encoding.UTF8);;
         })];
 

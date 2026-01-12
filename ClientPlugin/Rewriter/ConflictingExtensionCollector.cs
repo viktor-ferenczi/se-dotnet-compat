@@ -8,10 +8,8 @@ using System.Linq;
 namespace ClientPlugin.Rewriter;
 
 
-internal sealed class ConflictingExtensionCollector(SemanticModel _semanticModel) : CSharpSyntaxWalker
+internal sealed class ConflictingExtensionCollector(SemanticModel _semanticModel, Dictionary<IMethodSymbol, List<IMethodSymbol>> conflicts) : CSharpSyntaxWalker
 {
-    public readonly HashSet<IMethodSymbol> Conflicts = [];  
-
     public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
         var symbol = _semanticModel.GetDeclaredSymbol(node);
@@ -22,12 +20,18 @@ internal sealed class ConflictingExtensionCollector(SemanticModel _semanticModel
         if (extendedType == null)
             return;
 
+        // FIXME: Use full method signature with types in this
         var conflict =
             extendedType.GetMembers(symbol.Name)
                         .OfType<IMethodSymbol>()
-                        .Any(m => m.IsStatic);
+                        .FirstOrDefault(m => m.IsStatic);
 
-        if (conflict)
-            Conflicts.Add(symbol);
+        if (conflict is null)
+            return;
+
+        if (conflicts.TryGetValue(conflict, out var possibleExtensions))
+            possibleExtensions.Add(symbol);
+        else
+            conflicts.Add(conflict, [symbol]);
     }
 }
