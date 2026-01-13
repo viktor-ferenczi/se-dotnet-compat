@@ -34,9 +34,11 @@ static class CreateCompilation_Prefix
     {
         List<SyntaxTree> initialTrees = [.. scripts.Select((Script s) => CSharpSyntaxTree.ParseText(s.Code, parseOptions, s.Name, Encoding.UTF8))];
         var analysisCompilation = CSharpCompilation.Create("compat-analysis-compilation", initialTrees, __instance.m_metadataReferences, options);
-        
-        // FIXME: Return now if the compilation succeeds (find a way to pass it through as well to prevent double work)
-        
+
+        // Prevent rewriter edge cases from affecting mods who's compilation succeeded
+        if (!analysisCompilation.GetDiagnostics().Any(d => d.Severity == DiagnosticSeverity.Error))
+            return initialTrees;
+
         Dictionary<SyntaxTree, SemanticModel> initialTreeInfo = initialTrees.ToDictionary(tree => tree, tree => analysisCompilation.GetSemanticModel(tree));
 
         // Scan for clashing extension methods
