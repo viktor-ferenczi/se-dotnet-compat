@@ -22,6 +22,32 @@ internal class ConflictingExtensionRewriter(SemanticModel _semanticModel, Dictio
         return base.VisitUsingDirective(node);
     }
 
+    // FIXME: Either move this to another class or rename ConflictingExtensionRewriter
+    public override SyntaxNode VisitIdentifierName(IdentifierNameSyntax node)
+    {
+
+        var info = _semanticModel.GetSymbolInfo(node);
+
+        // Special Case:
+        // 'Vector3' is an ambiguous reference between 'VRageMath.Vector3' and 'System.Numerics.Vector3'
+        // FIXME: Investigate why this happens only on core. 'System.Numerics.Vector3' is present on framework too.
+
+        if (info.Symbol is null && info.CandidateSymbols.Length > 1)
+        {
+            ITypeSymbol[] candidates = [.. info.CandidateSymbols.OfType<ITypeSymbol>()];
+            bool hasNumerics = candidates.Any(s => s.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::System.Numerics.Vector3");
+            ITypeSymbol[] remaining = [.. candidates.Where(s => s.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) != "global::System.Numerics.Vector3")];
+
+            if (remaining.Length == 1)
+            {
+                var replacement = SyntaxFactory.ParseName(remaining[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                return replacement.WithTriviaFrom(node);
+            }
+        }
+
+        return base.VisitIdentifierName(node);
+    }
+
     public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
     {
         if (node.Expression is not MemberAccessExpressionSyntax member)
