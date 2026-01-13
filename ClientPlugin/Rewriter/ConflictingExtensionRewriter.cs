@@ -9,6 +9,19 @@ namespace ClientPlugin.Rewriter;
 
 internal class ConflictingExtensionRewriter(SemanticModel _semanticModel, Dictionary<IMethodSymbol, List<IMethodSymbol>> _conflicts) : CSharpSyntaxRewriter
 {
+    // FIXME: Move VisitUsingDirective to another class
+    // It's been put here for now so we have access to _semanticModel (trees change after each write pass)
+
+    public override SyntaxNode VisitUsingDirective(UsingDirectiveSyntax node)
+    {
+        // Remove broken usings
+        // FIXME: This fixes it but why are they even here? Whitelist issues? Types moving?
+        if (_semanticModel.GetSymbolInfo(node.Name!).Symbol is null)
+            return null;
+
+        return base.VisitUsingDirective(node);
+    }
+
     public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
     {
         if (node.Expression is not MemberAccessExpressionSyntax member)

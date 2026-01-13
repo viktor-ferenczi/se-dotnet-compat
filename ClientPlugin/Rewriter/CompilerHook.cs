@@ -68,13 +68,6 @@ static class CreateCompilation_Prefix
     //    "Downloads\\dump.txt"),
     //initialTrees.Where(x=>x.FilePath.Contains("SettingsMenu.cs") && x.FilePath.Contains("Input")).First().GetRoot().ToString());
 
-        // Replace bad usings (FIXME: use MyScriptManager.m_compatibilityChanges)
-        initialTrees = [.. initialTrees.Select(tree => {
-            var rewriter = new RemoveUsingRewriter();
-            var newRoot = rewriter.Visit(tree.GetRoot());
-            return CSharpSyntaxTree.Create((CSharpSyntaxNode)newRoot, parseOptions, tree.FilePath, Encoding.UTF8);;
-        })];
-
         return initialTrees;
     }
 }
