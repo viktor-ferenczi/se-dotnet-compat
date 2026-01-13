@@ -2,6 +2,7 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ClientPlugin.Rewriter;
@@ -13,15 +14,46 @@ internal class ConflictingExtensionRewriter(SemanticModel _semanticModel, Dictio
         if (node.Expression is not MemberAccessExpressionSyntax member)
             return base.VisitInvocationExpression(node);
 
-        var symbol = _semanticModel.GetSymbolInfo(node).Symbol as IMethodSymbol;
-        if (symbol == null)
-            return base.VisitInvocationExpression(node);
+        var info = _semanticModel.GetSymbolInfo(node);
+        if (info.Symbol is not IMethodSymbol symbol)
+        {
+            // Special Case:
+            // Net Framework Has Extension: FirstOrDefault<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
+            // Net Core Added Extension: FirstOrDefault<TSource>(IEnumerable<TSource> source, TSource defaultValue)
+            // Calling IEnumerable<TSource>.FirstOrDefault(null) is now ambiguous so we must explicitly call the Framework one
+            // Whilst this is still invalid code at runtime, some mods do it anyway (either a bug or due to flow control with exceptions)
 
+            if (info.CandidateReason == CandidateReason.OverloadResolutionFailure)
+            {
+                // We only care about information that is shared between all possible enumerable candidates so pick the first
+                // We assume this will ONLY fire in this special case so we know some information beforehand
+                var enumerableMethod = info.CandidateSymbols.OfType<IMethodSymbol>().FirstOrDefault(x => x.Name == "FirstOrDefault" && x.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == "global::System.Linq.Enumerable");
+                if (enumerableMethod is not null)
+                {
+                    if (node.ArgumentList.Arguments.Count == 1 && node.ArgumentList.Arguments[0].Expression.IsKind(SyntaxKind.NullLiteralExpression))
+                    {
+                        var tSource = enumerableMethod.TypeArguments[0];
+
+                        var funcType =
+                            _semanticModel.Compilation.GetTypeByMetadataName("System.Func`2")!
+                                .Construct(tSource, _semanticModel.Compilation.GetSpecialType(SpecialType.System_Boolean));
+
+                        // The cast allows the compiler to pick the correct method
+                        var castNull = SyntaxFactory.CastExpression(
+                            SyntaxFactory.ParseTypeName(funcType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)),
+                            SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression));
+
+                        return node.WithArgumentList(SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(castNull))));
+                    }
+                }
+            }
+
+            return base.VisitInvocationExpression(node);
+        }
+
+        // Lookup conflicting extensions as normal
         // FIXME: Might not work for null coallessing access
         var method = symbol.ReducedFrom ?? symbol.OriginalDefinition;
-
-        //if (method.ToString().Contains("Round"))
-        //    Debugger.Break();
 
         if (!_conflicts.TryGetValue(method, out var possibleExtensions))
             return base.VisitInvocationExpression(node);
