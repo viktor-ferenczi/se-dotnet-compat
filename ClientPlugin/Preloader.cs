@@ -59,7 +59,6 @@ public static class Preloader
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     public static void Finish()
     {
-        // Enabling BinaryFormatter. This may not work on .Net 9
         // See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
         AppContext.SetSwitch("System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization", true);
 
