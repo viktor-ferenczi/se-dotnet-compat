@@ -6,8 +6,8 @@ using Mono.Cecil.Cil;
 
 namespace ClientPlugin.Patches.NullSafety;
 
-[HarmonyPatchCategory("Init")]
 [HarmonyPatch]
+[HarmonyPatchCategory("Init")]
 public static class MyHeightMapLoadingSystemPrepatch
 {
     public static void Prepatch(AssemblyDefinition asmDef)

@@ -22,6 +22,9 @@ public static class MyAnalyticsBasePatch
     private static bool ReportEventPrefix(IMyAnalyticsEvent analyticsEvent)
     {
         // Prevent crash
-        return analyticsEvent != null;
+        //return analyticsEvent != null;
+        
+        // Still crashes on Linux, so do not send the analytics at all
+        return false;
     }
 }
