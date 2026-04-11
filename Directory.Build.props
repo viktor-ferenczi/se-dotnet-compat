@@ -4,8 +4,8 @@
         <Bin64>C:\Program Files (x86)\Steam\steamapps\common\SpaceEngineers\Bin64</Bin64>
 
         <!-- Plugin version -->
-        <Version>1.0.0</Version>
-        <AssemblyVersion>1.0.0.0</AssemblyVersion>
-        <FileVersion>1.0.0.0</FileVersion>
+        <Version>10.0.0</Version>
+        <AssemblyVersion>10.0.0.0</AssemblyVersion>
+        <FileVersion>10.0.0.0</FileVersion>
     </PropertyGroup>
 </Project>
