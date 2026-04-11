@@ -208,10 +208,6 @@
     <ItemGroup>
         <Content Include="Deploy.bat"/>
         <None Include="App.config"/>
-        <Compile Remove="Patches\ImageProcessing\MyImage.modified.cs"/>
-        <Compile Remove="Patches\ImageProcessing\MyImage.original.cs"/>
-        <Compile Remove="Patches\ImageProcessing\MyTextureData.modified.cs"/>
-        <Compile Remove="Patches\ImageProcessing\MyTextureData.original.cs"/>
     </ItemGroup>
 
     <ItemGroup>
