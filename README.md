@@ -10,7 +10,11 @@ Provides some of the performance benefits of the newer .NET runtime without havi
 
 ## How to use
 
-Run the `Interim.exe` binary of Pulsar. 
+Run the `Interim.exe` binary of Pulsar.
+
+## Credits
+
+- `SpaceGT` for his contribution in fixing a lot of issues with the .NET 10 port, especially mod support. 
 
 ## Bug reports
 
