@@ -1,5 +1,5 @@
 ﻿<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Interim" type="RunExe" factoryName=".NET Executable">
+  <configuration default="false" name="Pulsar Interim" type="RunExe" factoryName=".NET Executable">
     <option name="EXE_PATH" value="$USER_HOME$/AppData/Roaming/Pulsar/Interim.exe" />
     <option name="PROGRAM_PARAMETERS" value="-skipintro -sources" />
     <option name="WORKING_DIRECTORY" value="$USER_HOME$/AppData/Roaming/Pulsar" />
