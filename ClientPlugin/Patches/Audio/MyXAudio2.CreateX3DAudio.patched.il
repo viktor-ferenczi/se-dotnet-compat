@@ -23,7 +23,7 @@ ldarg.0
 ldarg.0
 ldfld SharpDX.Multimedia.Speakers VRage.Audio.MyXAudio2::m_channelMask
 ldc.i4.0
-newobj System.Void SharpDX.X3DAudio.X3DAudio::.ctor(SharpDX.Multimedia.Speakers speakers, SharpDX.X3DAudio.X3DAudioVersion requestVersion)
+newobj System.Void SharpDX.X3DAudio.X3DAudio::.ctor(SharpDX.Multimedia.Speakers _, SharpDX.X3DAudio.X3DAudioVersion __)
 stfld SharpDX.X3DAudio.X3DAudio VRage.Audio.MyXAudio2::m_x3dAudio
 L2:
 ldloc.0
