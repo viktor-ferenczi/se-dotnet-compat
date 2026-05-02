@@ -64,6 +64,25 @@ public static class Preloader
 
         // Fixes runtime loading the Keen version in some cases by initializing it explicitly
         Assembly.Load("System.Collections.Immutable");
+
+        // JIT-prewarm the Directory.Enumerate* call chain on the main thread.
+        //
+        // MonoMod's V60 JIT hook (used by Harmony on .NET 6 layout) SEGVs on
+        // .NET 10 when CoreCLR re-enters compileMethod from a worker thread for
+        // the LibraryImportGenerator-emitted P/Invoke stub of the runtime's
+        // thread-static helpers (StaticsHelpers.<GetThreadStaticsByIndex>g____PInvoke).
+        // That stub is JIT'd on first use of Directory.EnumerateFiles /
+        // SharedArrayPool<char>.Rent. In a normal Pulsar startup the first use
+        // happens on a ParallelTasks worker inside MyXAudio2.Preload, which is
+        // exactly the racy context that trips the hook.
+        //
+        // Compiling the stub here, on the main thread, before any Harmony
+        // patching or parallel preload runs, removes the race entirely. The
+        // IL stub is process-wide JIT'd code (only the per-thread storage it
+        // accesses is per-thread), so subsequent first-touches from worker
+        // threads call the already-compiled stub and never re-enter
+        // compileMethod. See Docs/Fixes.md (2026-05-01 entry).
+        PrewarmDirectoryEnumerationStubs();
         
         // Override game DLLs with the versions added as NuGet dependency by this plugin
         string[] dlls = [
@@ -81,5 +100,33 @@ public static class Preloader
         
         var harmony = new Harmony("DotNetCompat");
         harmony.PatchCategory("Finish");
+    }
+
+    private static void PrewarmDirectoryEnumerationStubs()
+    {
+        try
+        {
+            var baseDir = AppContext.BaseDirectory;
+            if (string.IsNullOrEmpty(baseDir) || !System.IO.Directory.Exists(baseDir))
+                return;
+
+            // Iterating one entry is enough to JIT the FileSystemEnumerator<T>
+            // generic specialization, SharedArrayPool<char>.Rent, the lazy
+            // thread-static initializer for the array pool, and the P/Invoke
+            // stub the initializer reaches via StaticsHelpers — i.e. the full
+            // chain shown in the crashing core dump.
+            using (var e = System.IO.Directory.EnumerateFiles(baseDir).GetEnumerator())
+                e.MoveNext();
+            using (var e = System.IO.Directory.EnumerateDirectories(baseDir).GetEnumerator())
+                e.MoveNext();
+
+            Console.WriteLine("[DotNetCompat] Pre-warmed Directory.Enumerate* JIT stubs on main thread");
+        }
+        catch (Exception ex)
+        {
+            // Pre-warm is purely preventative; a failure here is not fatal.
+            // Worst case the original race window is back.
+            Console.WriteLine($"[DotNetCompat] Pre-warm of Directory.Enumerate* failed: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 }
