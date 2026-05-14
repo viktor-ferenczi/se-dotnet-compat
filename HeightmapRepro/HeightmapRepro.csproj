@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <RootNamespace>HeightmapRepro</RootNamespace>
+        <AssemblyName>HeightmapRepro</AssemblyName>
+        <LangVersion>13</LangVersion>
+        <Nullable>disable</Nullable>
+        <PlatformTarget>x64</PlatformTarget>
+
+        <!-- The Directory.Build.props pre-build event verifies $(Bin64) exists; skip it
+             for this project — we already reference $(Bin64) directly in <Reference>. -->
+        <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+    </PropertyGroup>
+
+    <!-- Reference the *exact* SixLabors.ImageSharp.dll that the game uses, so the
+         bug surfaces with the same binary the game runs. Private=true so it gets
+         copied to bin/ for runtime. -->
+    <ItemGroup>
+        <Reference Include="SixLabors.ImageSharp">
+            <HintPath>$(Bin64)\SixLabors.ImageSharp.dll</HintPath>
+            <Private>True</Private>
+        </Reference>
+        <PackageReference Include="Lib.Harmony" Version="2.3.3" />
+        <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+    </ItemGroup>
+
+    <!-- Suppress the inherited verify_props pre-build hook from the ClientPlugin csproj
+         pattern — this project doesn't need it. -->
+    <PropertyGroup>
+        <PreBuildEvent></PreBuildEvent>
+        <PostBuildEvent></PostBuildEvent>
+    </PropertyGroup>
+</Project>
