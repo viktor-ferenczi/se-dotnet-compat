@@ -360,3 +360,6 @@ MigrationBackup/
 
 # JetBrains Rider project files
 /.idea/
+
+# IL files (used for debug diagnostics)
+*.il
