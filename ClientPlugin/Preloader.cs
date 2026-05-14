@@ -16,6 +16,56 @@ using Mono.Cecil;
 // ReSharper disable once UnusedType.Global
 public static class Preloader
 {
+    // Assembly names this plugin overrides via AssemblyResolve. Loaded from the
+    // plugin's NuGet dependencies (staged by Pulsar into the plugin Bin folder).
+    private static readonly HashSet<string> OverriddenAssemblies = new(StringComparer.Ordinal)
+    {
+        "System.Management",
+    };
+
+    // Tracks assembly names currently being resolved on this thread to break
+    // AssemblyResolve recursion. See ResolveOverriddenAssembly for details.
+    [System.ThreadStatic]
+    private static HashSet<string> _resolvingTls;
+    private static HashSet<string> Resolving =>
+        _resolvingTls ??= new HashSet<string>(StringComparer.Ordinal);
+
+    private static Assembly ResolveOverriddenAssembly(object sender, ResolveEventArgs args)
+    {
+        var targetName = new AssemblyName(args.Name).Name;
+        if (!OverriddenAssemblies.Contains(targetName))
+            return null;
+
+        // Re-entry guard: Assembly.Load(name) fires AssemblyResolve again if the
+        // runtime can't bind the name to a TPA/probe path. Without a guard the
+        // handler recurses until the stack overflows (exit code 0xC00000FD) with
+        // no useful diagnostic. If we re-enter for the same name, bail with a
+        // clear error instead.
+        if (!Resolving.Add(targetName))
+        {
+            Console.Error.WriteLine(
+                $"[DotNetCompat] AssemblyResolve recursion for '{targetName}'. " +
+                "The runtime cannot locate this assembly by name; Pulsar must " +
+                "stage it in a probe path (e.g. plugin Bin folder). Returning null " +
+                "to abort the resolve chain.");
+            return null;
+        }
+        try
+        {
+            return Assembly.Load(targetName);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"[DotNetCompat] Failed to load '{targetName}': {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            Resolving.Remove(targetName);
+        }
+    }
+
     // ReSharper disable once UnusedMember.Global
     public static IEnumerable<string> TargetDLLs { get; } =
     [
@@ -85,14 +135,7 @@ public static class Preloader
         PrewarmDirectoryEnumerationStubs();
         
         // Override game DLLs with the versions added as NuGet dependency by this plugin
-        string[] dlls = [
-            "System.Management",
-        ];
-        AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
-        {
-            var targetName = new AssemblyName(args.Name).Name;
-            return dlls.Contains(targetName) ? Assembly.Load(targetName) : null;
-        };
+        AppDomain.CurrentDomain.AssemblyResolve += ResolveOverriddenAssembly;
         
 #if DEBUG && HARMONY_DEBUG
         Harmony.DEBUG = true;
