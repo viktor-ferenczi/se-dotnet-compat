@@ -82,13 +82,13 @@ static class CreateCompilation_Prefix
         if (scripts != null)
         {
             CSharpParseOptions parseOptions = __instance.m_conditionalParseOptions.WithPreprocessorSymbols(__instance.m_conditionalCompilationSymbols);
-            syntaxTrees = GetRewrittenTrees(__instance, [.. scripts], parseOptions, options);
+            syntaxTrees = GetRewrittenTrees(__instance, [.. scripts], parseOptions, options, assemblyFileName);
         }
         __result = CSharpCompilation.Create(MyScriptCompiler.MakeAssemblyName(assemblyFileName), syntaxTrees, __instance.m_metadataReferences, options);
         return false;
     }
 
-    public static IEnumerable<SyntaxTree> GetRewrittenTrees(MyScriptCompiler __instance, List<Script> scripts, CSharpParseOptions parseOptions, CSharpCompilationOptions options)
+    public static IEnumerable<SyntaxTree> GetRewrittenTrees(MyScriptCompiler __instance, List<Script> scripts, CSharpParseOptions parseOptions, CSharpCompilationOptions options, string assemblyFileName)
     {
         // Read-and-clear: from this point on, no code path needs the
         // captured target, so we drop it immediately to avoid leaving a
@@ -184,13 +184,160 @@ static class CreateCompilation_Prefix
             }
         }
 
-    //    System.IO.File.WriteAllText(
-    //System.IO.Path.Combine(
-    //    System.Environment.GetFolderPath(
-    //        System.Environment.SpecialFolder.UserProfile),
-    //    "Downloads\\dump.txt"),
-    //initialTrees.Where(x=>x.FilePath.Contains("SettingsMenu.cs") && x.FilePath.Contains("Input")).First().GetRoot().ToString());
+#if DEBUG && DUMP_REWRITTEN_CODE
+        DebugSaveRewrittenCode(initialTrees, assemblyFileName);
+#endif
 
         return initialTrees;
+    }
+
+    private static void DebugSaveRewrittenCode(List<SyntaxTree> initialTrees, string assemblyFileName)
+    {
+        // Diagnostic dump of the rewritten trees. Best-effort: any I/O
+        // failure must not break mod compilation, so the whole block is
+        // wrapped in a swallowing catch.
+        //
+        // Layout: <UserProfile>/DotNetCompat_Rewritten/<modName>/<inModRelPath>.
+        //
+        // <modName> is the basename of the mod assembly path (e.g.
+        // "2923698329.sbm_Lima"), not the full path — the caller passes an
+        // absolute path in assemblyFileName.
+        //
+        // <inModRelPath> is the source file's location relative to the
+        // common ancestor of all source files in this compilation batch.
+        // The common ancestor is effectively the mod's content root, so
+        // this reproduces only the structure that exists *inside* the mod
+        // (e.g. "Data/Scripts/Foo/Bar.cs") rather than the entire absolute
+        // path from /. With a single source file in the batch the common
+        // ancestor is its own directory, so it lands directly under
+        // <modName>/.
+        try
+        {
+            // The assembly path's basename is the mod ID (e.g. "2923698329.sbm_Lima").
+            string modDirName = SanitizePathSegment(
+                System.IO.Path.GetFileName(assemblyFileName ?? ""));
+            if (string.IsNullOrWhiteSpace(modDirName))
+                modDirName = "_unknown_mod";
+
+            string dumpDir = System.IO.Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
+                "DotNetCompat_Rewritten",
+                modDirName);
+            System.IO.Directory.CreateDirectory(dumpDir);
+
+            // Common-ancestor segment count across all real source paths.
+            // Trees with no FilePath are ignored here and later fall back to
+            // a GUID name at the mod root.
+            int commonPrefixLen = ComputeCommonPrefixLength(
+                initialTrees
+                    .Select(t => t.FilePath)
+                    .Where(p => !string.IsNullOrWhiteSpace(p))
+                    .Select(SplitPath)
+                    .ToList());
+
+            var usedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var tree in initialTrees)
+            {
+                string relDir = "";
+                string name = null;
+                if (!string.IsNullOrWhiteSpace(tree.FilePath))
+                {
+                    name = System.IO.Path.GetFileName(tree.FilePath);
+                    if (!name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase))
+                        name += ".cs";
+
+                    // Drop the common ancestor prefix and the file name itself,
+                    // leaving only the in-mod directory chain.
+                    var segments = SplitPath(tree.FilePath);
+                    var relSegments = segments
+                        .Skip(commonPrefixLen)
+                        .Take(Math.Max(0, segments.Count - commonPrefixLen - 1))
+                        .Select(SanitizePathSegment)
+                        .Where(p => !string.IsNullOrEmpty(p))
+                        .ToArray();
+                    if (relSegments.Length > 0)
+                        relDir = string.Join(System.IO.Path.DirectorySeparatorChar.ToString(), relSegments);
+                }
+                if (string.IsNullOrWhiteSpace(name))
+                    name = Guid.NewGuid().ToString("N") + ".cs";
+
+                string targetDir = string.IsNullOrEmpty(relDir)
+                    ? dumpDir
+                    : System.IO.Path.Combine(dumpDir, relDir);
+                System.IO.Directory.CreateDirectory(targetDir);
+
+                // De-duplicate within this batch (across the full relative path).
+                string finalName = name;
+                int suffix = 1;
+                string key = System.IO.Path.Combine(targetDir, finalName);
+                while (!usedPaths.Add(key))
+                {
+                    finalName = System.IO.Path.GetFileNameWithoutExtension(name)
+                                + "_" + suffix++ + ".cs";
+                    key = System.IO.Path.Combine(targetDir, finalName);
+                }
+
+                System.IO.File.WriteAllText(
+                    key,
+                    tree.GetRoot().ToFullString(),
+                    Encoding.UTF8);
+            }
+        }
+        catch
+        {
+            // Diagnostic-only; never let a dump failure break compilation.
+        }
+    }
+
+    /// <summary>
+    /// Splits a path into segments on both '/' and '\', dropping empties
+    /// (so leading separators and double separators contribute nothing).
+    /// Segments are returned as-is (no sanitization), since prefix matching
+    /// must compare the original on-disk names.
+    /// </summary>
+    private static List<string> SplitPath(string path) =>
+        [.. path.Replace('\\', '/')
+            .Split(['/'], StringSplitOptions.RemoveEmptyEntries)];
+
+    /// <summary>
+    /// Number of leading segments shared by every input segment list.
+    /// Empty input or a single path returns that path's directory length
+    /// (count minus the file name) so a singleton batch lands at the root.
+    /// </summary>
+    private static int ComputeCommonPrefixLength(List<List<string>> paths)
+    {
+        if (paths.Count == 0)
+            return 0;
+        if (paths.Count == 1)
+            return Math.Max(0, paths[0].Count - 1);
+
+        int min = paths.Min(p => p.Count);
+        // Leave at least the file name on the shortest path so callers can
+        // still extract a non-empty leaf after the prefix is stripped.
+        int max = Math.Max(0, min - 1);
+        int prefix = 0;
+        while (prefix < max)
+        {
+            string s = paths[0][prefix];
+            bool allMatch = paths.All(p => string.Equals(p[prefix], s, StringComparison.OrdinalIgnoreCase));
+            if (!allMatch)
+                break;
+            prefix++;
+        }
+        return prefix;
+    }
+
+    /// <summary>
+    /// Replaces characters invalid in a file/directory name with underscores.
+    /// </summary>
+    private static string SanitizePathSegment(string segment)
+    {
+        if (string.IsNullOrEmpty(segment))
+            return segment;
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var sb = new StringBuilder(segment.Length);
+        foreach (var ch in segment)
+            sb.Append(Array.IndexOf(invalid, ch) >= 0 ? '_' : ch);
+        return sb.ToString();
     }
 }
