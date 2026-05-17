@@ -31,6 +31,14 @@ static class StreamReadPatch
 {
     private static readonly MethodInfo OriginalReadMethod = AccessTools.Method(typeof(Stream), nameof(Stream.Read), [typeof(byte[]), typeof(int), typeof(int)]);
     private static readonly MethodInfo ReplacementReadMethod = AccessTools.Method(typeof(StreamReadPatch), nameof(ReplacementRead));
+    private static readonly MethodInfo ReplacementReadDrainMethod = AccessTools.Method(typeof(StreamReadPatch), nameof(ReplacementReadDrain));
+
+    // Methods whose Stream.Read sites should use the drain variant (loop until
+    // either count bytes are read OR the stream is exhausted, returning the
+    // actual count) instead of the default exact variant (throw on short).
+    // Use the drain variant for "give me up to N bytes" semantics; use the
+    // default for fixed-size reads where short == corruption.
+    private static readonly HashSet<MethodBase> DrainTargets = [];
 
     // ReSharper disable once UnusedMember.Global
     [HarmonyTargetMethods]
@@ -109,6 +117,13 @@ static class StreamReadPatch
             // MyCompressionStreamLoad - stream-based compression loading (VRage.Library)
             ("MyCompressionStreamLoad..ctor(byte[])", AccessTools.Constructor(typeof(MyCompressionStreamLoad), [typeof(byte[])])),
             ("MyCompressionStreamLoad.GetInt32", AccessTools.Method(typeof(MyCompressionStreamLoad), nameof(MyCompressionStreamLoad.GetInt32))),
+            // GetBytes' inner Read is a single BufferedStream.Read that's allowed to
+            // short-return; callers (e.g. BigGustave-based PNG inflate in the
+            // "Ore Detector Reforged" mod) assume one call drains the requested
+            // amount, then truncate their buffer to the returned count. Use the
+            // drain variant so we loop until either the request is satisfied or
+            // the underlying stream is exhausted, and return the actual count.
+            ("MyCompressionStreamLoad.GetBytes", AccessTools.Method(typeof(MyCompressionStreamLoad), nameof(MyCompressionStreamLoad.GetBytes))),
 
             // MyStorageBase - voxel storage loading (Sandbox.Game)
             // Note: The actual Stream.Read call is in a compiler-generated local function,
@@ -149,6 +164,10 @@ static class StreamReadPatch
                 string.Join(", ", unresolved) +
                 ". A game update or dependency upgrade likely changed their name or signature.");
 
+        // Mark drain-semantic targets (bounded-not-exact reads).
+        var getBytes = AccessTools.Method(typeof(MyCompressionStreamLoad), nameof(MyCompressionStreamLoad.GetBytes));
+        DrainTargets.Add(getBytes);
+
         return targets.Select(t => t.Method);
     }
 
@@ -179,12 +198,14 @@ static class StreamReadPatch
         var il = codeInstructions.ToList();
         il.RecordOriginalCode(patchedMethod);
 
+        var replacement = DrainTargets.Contains(patchedMethod) ? ReplacementReadDrainMethod : ReplacementReadMethod;
+
         var count = 0;
         for (var i = 0; i < codeInstructions.Length; i++)
         {
             if (il[i].Calls(OriginalReadMethod))
             {
-                il[i] = new CodeInstruction(OpCodes.Call, ReplacementReadMethod);
+                il[i] = new CodeInstruction(OpCodes.Call, replacement);
                 count++;
             }
         }
@@ -206,6 +227,26 @@ static class StreamReadPatch
             var bytesRead = stream.Read(array, offset + totalRead, count - totalRead);
             if (bytesRead == 0)
                 throw new EndOfStreamException();
+
+            totalRead += bytesRead;
+        }
+
+        return totalRead;
+    }
+
+    // Like ReplacementRead but tolerates premature EOF: loops until either
+    // count bytes are read or the underlying stream is exhausted, then returns
+    // the actual byte count. Used for bounded-not-exact reads (callers pass a
+    // max size and rely on the returned length to know how much really came
+    // back), where throwing on EOF would change semantics.
+    private static int ReplacementReadDrain(Stream stream, byte[] array, int offset, int count)
+    {
+        var totalRead = 0;
+        while (totalRead < count)
+        {
+            var bytesRead = stream.Read(array, offset + totalRead, count - totalRead);
+            if (bytesRead == 0)
+                break;
 
             totalRead += bytesRead;
         }
