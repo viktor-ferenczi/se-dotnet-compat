@@ -2,10 +2,8 @@
 // ReSharper disable InconsistentNaming
 
 using System;
-using System.IO;
 using System.Reflection;
 using System.Collections.Generic;
-using System.Runtime.Loader;
 using ServerPlugin.Patches.ImageProcessing;
 using ServerPlugin.Patches.NullSafety;
 using ServerPlugin.Patches.Serialization;
@@ -19,6 +17,59 @@ using Mono.Cecil;
 // ReSharper disable once UnusedType.Global
 public static class Preloader
 {
+    // Assembly names this plugin overrides via AssemblyResolve. Loaded from the
+    // plugin's NuGet dependencies (staged by Magnetar into NuGet/bin/<hash>/ and
+    // served by Magnetar's AssemblyResolver hook on AppDomain.AssemblyResolve).
+    private static readonly HashSet<string> OverriddenAssemblies = new(StringComparer.Ordinal)
+    {
+        "System.Management",
+        "System.Drawing.Common",
+        "System.Diagnostics.PerformanceCounter",
+    };
+
+    // Tracks assembly names currently being resolved on this thread to break
+    // AssemblyResolve recursion. See ResolveOverriddenAssembly for details.
+    [System.ThreadStatic]
+    private static HashSet<string> _resolvingTls;
+    private static HashSet<string> Resolving =>
+        _resolvingTls ??= new HashSet<string>(StringComparer.Ordinal);
+
+    private static Assembly ResolveOverriddenAssembly(object sender, ResolveEventArgs args)
+    {
+        var targetName = new AssemblyName(args.Name).Name;
+        if (!OverriddenAssemblies.Contains(targetName))
+            return null;
+
+        // Re-entry guard: Assembly.Load(name) fires AssemblyResolve again if the
+        // runtime can't bind the name to a TPA/probe path. Without a guard the
+        // handler recurses until the stack overflows (exit code 0xC00000FD) with
+        // no useful diagnostic. If we re-enter for the same name, bail with a
+        // clear error instead.
+        if (!Resolving.Add(targetName))
+        {
+            Console.Error.WriteLine(
+                $"[DotNetCompat] AssemblyResolve recursion for '{targetName}'. " +
+                "The runtime cannot locate this assembly by name; Magnetar must " +
+                "stage it in a probe path (e.g. plugin Bin folder). Returning null " +
+                "to abort the resolve chain.");
+            return null;
+        }
+        try
+        {
+            return Assembly.Load(targetName);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"[DotNetCompat] Failed to load '{targetName}': {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            Resolving.Remove(targetName);
+        }
+    }
+
     // ReSharper disable once UnusedMember.Global
     public static IEnumerable<string> TargetDLLs { get; } =
     [
@@ -68,39 +119,11 @@ public static class Preloader
         // Fixes runtime loading the Keen version in some cases by initializing it explicitly
         Assembly.Load("System.Collections.Immutable");
 
-        // Pre-load NuGet dependency DLLs from the Bin directory
-        var assemblyDir = Path.GetDirectoryName(typeof(Preloader).Assembly.Location)!;
-        var dataRoot = Path.GetDirectoryName(assemblyDir)!;
-        var binDirCandidates = new List<string>
-        {
-            Path.Combine(assemblyDir, "Bin"),
-        };
-        var githubDir = Path.Combine(dataRoot, "GitHub");
-        if (Directory.Exists(githubDir))
-        {
-            foreach (var pluginDir in Directory.GetDirectories(githubDir, "*", SearchOption.AllDirectories))
-            {
-                var binDir = Path.Combine(pluginDir, "Bin");
-                if (Directory.Exists(binDir))
-                    binDirCandidates.Add(binDir);
-            }
-        }
-        string[] dlls = [
-            "System.Management",
-            "System.Drawing.Common",
-            "System.Diagnostics.PerformanceCounter",
-        ];
-        foreach (var dll in dlls)
-        {
-            foreach (var binDir in binDirCandidates)
-            {
-                var dllPath = Path.GetFullPath(Path.Combine(binDir, dll + ".dll"));
-                if (!File.Exists(dllPath))
-                    continue;
-                AssemblyLoadContext.Default.LoadFromAssemblyPath(dllPath);
-                break;
-            }
-        }
+        // Override game DLLs with the versions added as NuGet dependency by this plugin.
+        // Magnetar's AssemblyResolver serves these from NuGet/bin/<hash>/ via the same
+        // AppDomain.AssemblyResolve event when ResolveOverriddenAssembly delegates to
+        // Assembly.Load(name) and the runtime probe fails.
+        AppDomain.CurrentDomain.AssemblyResolve += ResolveOverriddenAssembly;
 
 #if DEBUG && HARMONY_DEBUG
         Harmony.DEBUG = true;
