@@ -4,112 +4,130 @@ Record of fixes verified by the full test suite.
 
 ## 2026-05-26: Replication type-table off by two on DS (`System.Delegate` / `System.MulticastDelegate`)
 
-**Symptom**: Multiplayer join fails immediately with the client log
-line `Bad number of types from server. Received 712, have 714`. The
-client's diagnostic dump (added in the `Serialize` prefix's mismatch
-path) lists the two extras as exactly `System.Delegate` and
-`System.MulticastDelegate`. The DS log shows no replication error of
-its own — it serializes 712 entries and disconnects only when the
-client throws.
+**Symptom**: Multiplayer join fails — intermittently and depending on
+startup timing — with the client log line
+`Bad number of types from server. Received 712, have 714`, and/or
+constant desync after the player connects. The client's diagnostic
+dump (in the `Serialize` prefix's mismatch path) names the two extras
+as exactly `System.Delegate` and `System.MulticastDelegate`. The DS
+serializes 712 entries while the client has 714.
 
-**Diagnosis**: Both `IsSerializableClass` prefix and a postfix on
-`MyReplicationLayerBase.RegisterFromAssembly` were tried first. The
-diagnostic log lines added inside them confirmed the postfix fired on
-the client (size `714 -> 714`, a no-op — the client already had
-them) but never fired at all on the DS. Cross-referencing the DS log
-timeline made the cause obvious:
+**Diagnosis**: On .NET Framework 4.8 both types carry `[Serializable]`,
+so `MyTypeTable.IsSerializableClass` admits them and the scan-time
+`RegisterFromGameAssemblies` pass pulls them in via `CreateBaseType`
+(walking up from the first game-defined delegate type it registers).
+On .NET 10 both types lost `[Serializable]`, so the stock check rejects
+them and the scan stops two entries short (712 instead of 714).
+
+Both sides run .NET 10, so the discrepancy is purely about *when the
+plugin's `IsSerializableClass` prefix is in place relative to the scan*:
+
+- On the **client**, Pulsar applies the plugin's Harmony patches early
+  enough that the prefix is active before the scan, so the client scan
+  registers the two delegate types at their natural mid-table positions
+  → 714.
+- On the **DS**, Magnetar's loader runs `Plugin.Init` (Harmony
+  `"Init"` category) *after* `RegisterFromGameAssemblies` has already
+  built and finalized the table. An `"Init"`-category prefix is inert
+  against the scan on the server → 712.
 
 | Time         | Event                                                           |
 |--------------|-----------------------------------------------------------------|
-| 00:28:30.886 | `MyMultiplayerBase - START/END` etc. — `MyTypeTable.RegisterType` log emissions during `Preallocate`. Type table populated to 712 entries. |
-| 00:28:30.912 | `Preallocate - END` — type table is final.                      |
+| (preload)    | `Preloader.Finish` — Harmony `"Finish"` category applied, before any game init. |
+| 00:28:30.886 | `RegisterFromGameAssemblies` runs; type table populated. |
+| 00:28:30.912 | Type table final.                                               |
 | 00:28:32.469 | `MySandboxGame.Initialize() - START`                            |
-| 00:28:38.444 | `MySandboxGame.Initialize() - END`                              |
-| 00:28:38.494 | `Plugin Init: Pulsar.Legacy.Loader.PluginLoader` — Harmony patches finally applied, ~8 s after `MyTypeTable.RegisterFromAssemblies` returned. |
-
-So both the `IsSerializableClass` prefix and the `RegisterFromAssembly`
-postfix have been silently inert on the DS the whole time. On the
-client the `IsSerializableClass` prefix does work because Magnetar's
-installer bootstraps plugins early enough to be in place before the
-scan — that asymmetry is why the bug presents as "client has 2 more
-than server", never the other way around.
+| 00:28:38.494 | `Plugin Init: Pulsar.Legacy.Loader.PluginLoader` — `"Init"` category applied, *after* the table was final. |
 
 This also closes the speculation in the 2026-05-01 entry that TC=0
 was "freezing assembly enumeration to a smaller set". The real cause
-isn't enumeration — it's that the DS plugin loader runs Init after
-the type table is final, so nothing the plugin patches at scan time
-can take effect. TC=0 only made the bug more visible by altering which
-delegate-derived types `CreateBaseType` happened to walk up from.
+isn't enumeration — it's plugin-load timing on the DS. TC=0 only made
+the bug more visible by altering which delegate-derived types
+`CreateBaseType` happened to walk up from.
 
-**Fix**: Two cooperating patches in
-[`ServerPlugin/Patches/Miscellaneous/MyTypeTablePatch.cs`](../ServerPlugin/Patches/Miscellaneous/MyTypeTablePatch.cs):
+**First (flawed) fix and why it was fragile**: the original commit kept
+the `IsSerializableClass` prefix in the `"Init"` category (inert on the
+DS scan) and added a `Serialize` prefix that, behind a process-global
+`_delegateTypesRegistered` flag, called `Register(typeof(Delegate))` /
+`Register(typeof(MulticastDelegate))` on the first wire write. Two
+defects made it break:
 
-1. An `IsSerializableClass` prefix that returns `true` for
-   `System.Delegate` / `System.MulticastDelegate`. Per the timeline
-   above, this prefix is inert against the scan-time
-   `RegisterFromGameAssemblies` pass on the DS — but it IS active for
-   any later call into `MyTypeTable.Register`, which is what step 2
-   relies on. (The first version of this fix shipped only step 2 on
-   the DS and the lazy `Register` call no-op'd because the un-patched
-   `IsSerializableClass` gate in
-   [`MyTypeTable.Register`](../../.../VRage/Network/MyTypeTable.cs)
-   rejected both types — the symptom in the DS log was
-   `[DotNetCompat] Lazy-registered Delegate/MulticastDelegate in
-   Serialize: typeTable size 712 -> 712` instead of `712 -> 714`.)
+1. **Timing/state dependency on a process-global flag.** Each
+   `MyReplicationLayerBase` owns its own `MyTypeTable` — the offline
+   layer (`MyReplicationSingle`, built in `MySandboxGame.Initialize`)
+   and the server layer (`MyReplicationServer`, built in
+   `MyMultiplayerServerBase`) are *separate* instances. Whichever
+   serialized first flipped the static flag, leaving any later-built
+   table stuck at 712 → `Received 712, have 714` at join.
+2. **Append-at-end vs natural position.** Registering the two types
+   lazily appended them at indices 712/713 on the server while the
+   client has them mid-table. The hash-list handshake reorders the
+   client's `m_idToType` to server order, so server→client replication
+   still resolves, but the divergent ordering is brittle and was a
+   likely contributor to the post-join desync.
 
-2. A `Serialize` prefix that, on the first wire write, calls
-   `Register(typeof(Delegate))` and `Register(typeof(MulticastDelegate))`.
-   The first `Serialize` happens at client-join time, well after
-   plugin Init, so the `IsSerializableClass` prefix from step 1 is in
-   place by then and `Register` accepts the two types into
-   `m_idToType` / `m_hashLookup` / `m_typeLookup`. Once they're in
-   `m_typeLookup`, subsequent joins skip the work via the
-   `TryGetValue` short-circuit at the top of `Register`. A one-shot
-   `_delegateTypesRegistered` flag just suppresses repeat log lines.
+**Fix**: two cooperating patches, both in the **`"Finish"` category**, in
+[`ServerPlugin/Patches/Miscellaneous/MyTypeTablePatch.cs`](../ServerPlugin/Patches/Miscellaneous/MyTypeTablePatch.cs).
+`Preloader.Finish` applies `"Finish"` patches *before* any game
+initialization — before every `RegisterFromGameAssemblies` pass (the
+offline layer in `MySandboxGame.Initialize` and the server layer in
+`MyMultiplayerServerBase`):
 
-The wire format is a hash list and the client reorders its own
-`m_idToType` to match server hash order, so it doesn't matter that
-the appended entries land at indices 712/713 on the server while the
-client has them at different positions.
+1. `IsSerializableClassPrefix` — admits `Delegate` / `MulticastDelegate`.
+   This is necessary because `MyTypeTable.Register` gates on
+   `IsReplicated || HasEvents || IsSerializableClass`; without the prefix,
+   an explicit `Register(typeof(Delegate))` silently no-ops on .NET 10.
+2. `MyReplicationLayerBasePatch.RegisterFromAssemblyPostfix` — a postfix on
+   `MyReplicationLayerBase.RegisterFromAssembly(IEnumerable<Assembly>)` that,
+   after the scan, **explicitly** calls `Register(typeof(Delegate))` /
+   `Register(typeof(MulticastDelegate))` on the layer's type table.
 
-The client-side `IsSerializableClass` prefix in
+The explicit postfix is the key robustness improvement over relying on the
+scan alone. Whether the scan picks up the two types via `CreateBaseType`
+depends on which game delegate types it materializes and walks up from —
+exactly the non-determinism that made them *sometimes* missing (and that the
+2026-05-01 note saw shift with JIT tiering). The postfix removes that
+dependency: in the common case the scan already registered them (the prefix
+admits them mid-table) and the explicit `Register` is a no-op; in the edge
+case where the walk missed them, it appends them. Either way the table ends
+at a deterministic **714 entries**.
+
+Ordering does not affect correctness: the wire handshake reorders the
+client's `m_idToType` to server hash order, and server→client lookups are
+index-based after the reorder, so only the **set and count** must match.
+
+The server's `Serialize` prefix was **removed entirely** — both the lazy
+`Register` block and the `_delegateTypesRegistered` flag that made it
+fragile, and the defensive reimplementation that wrapped them. With the
+table now built correctly (714 entries) before any client joins, the stock
+`MyTypeTable.Serialize` is left in place on the server.
+
+The client-side patch in
 [`ClientPlugin/Patches/Miscellaneous/MyTypeTablePatch.cs`](../ClientPlugin/Patches/Miscellaneous/MyTypeTablePatch.cs)
-is retained — that's the mechanism that puts the two types into the
-client's table to begin with, and it does run early enough there. The
-`Serialize` wrapper with `LogTypeTableMismatch` is also kept on the
-client; it was the diagnostic that named the two missing types and is
-cheap insurance for future drifts.
-
-The earlier attempt — `MyReplicationLayerBaseDelegateRegistrationPatch`,
-a postfix on `MyReplicationLayerBase.RegisterFromAssembly` — was
-deleted from both sides. On the DS it never fired; on the client it
-was a redundant `714 -> 714` no-op.
+stays in the `"Init"` category — Pulsar already applies it early enough
+there. The category differs between the two plugins by design.
 
 **Rule of thumb for the next maintainer**: on the DS,
-`Pulsar.Legacy.Loader.PluginLoader` runs `Plugin Init` *after*
-`MyTypeTable.RegisterFromAssemblies`. Patches on
-`IsSerializableClass`, `MyTypeTable.RegisterType`, or
-`MyReplicationLayerBase.RegisterFromAssembly` will not influence the
-initial scan-time table on the DS — anything that needs to add
-entries must drive a later `Register` call itself (e.g. from a
-`Serialize` prefix). The `IsSerializableClass` prefix above is not
-sufficient on its own on the DS, but it IS necessary alongside the
-lazy `Register` call: without it the gate inside `MyTypeTable.Register`
-rejects `Delegate` / `MulticastDelegate` and the lazy add silently
-no-ops. The only place the failure becomes visible is at multiplayer
-join when the client receives a hash list shorter than its own table.
+`Pulsar.Legacy.Loader.PluginLoader` runs `Plugin.Init` (`"Init"`
+category) *after* `RegisterFromGameAssemblies`, so anything that must
+influence the scan-time table has to live in the `"Finish"` category
+(applied by `Preloader.Finish`, before game init). Do **not** revert to
+a lazy `Register` from `Serialize`: it is per-table-instance fragile and
+diverges the ordering from the client.
 
-**Verification**: After the fix, the DS log must contain
-`[DotNetCompat] Lazy-registered Delegate/MulticastDelegate in Serialize: typeTable size 712 -> 714`
-once per process lifetime, and the `Bad number of types from server`
-exception must be gone. If the log instead shows `712 -> 712`, the
-`IsSerializableClass` prefix isn't loaded on the DS Harmony instance
-— most likely because the deployed plugin DLL is `ServerPlugin`-only
-and someone removed the prefix from `ServerPlugin/Patches/Miscellaneous/MyTypeTablePatch.cs`,
-or because the DS is running an older release that pre-dates this
-two-part fix. Treat any future recurrence of "Received N, have N+2"
-with `System.Delegate` / `System.MulticastDelegate` named in the
-client's mismatch diagnostic as a regression of this fix.
+**Verification**: After the fix, the DS log contains
+`[DotNetCompat] Explicitly registered Delegate/MulticastDelegate after scan: present=True`
+once per type-table build, the DS and client type tables both report 714
+entries, and the `Bad number of types from server` exception is gone with
+no post-join desync. Cross-check the count against
+`%AppData%\SpaceEngineers\DotNetDump\ReplicatedTypes.json` (captured by the
+DotNetDump plugin), which records 714 as the correct value. If the log shows
+`present=False`, the `IsSerializableClass` prefix isn't active — confirm both
+patches are still in the `"Finish"` category on the server (an accidental
+move back to `"Init"` makes them inert against the scan again). Treat any
+future recurrence of "Received N, have N+2" naming `System.Delegate` /
+`System.MulticastDelegate` in the client's mismatch diagnostic as a
+regression of this fix.
 
 ## 2026-05-01: Intermittent JIT SIGSEGV during parallel preload (MonoMod hook on .NET 10)
 
@@ -221,14 +239,16 @@ original SIGSEGV at bay without touching JIT tiering.
 
 If `DOTNET_TieredCompilation=0` ever needs to come back as a
 fallback, the type-table mismatch it triggered is now understood —
-see the 2026-05-26 entry. The root cause is plugin-Init timing on
-the DS (the loader runs after `MyTypeTable.RegisterFromAssemblies`),
-not TC-driven assembly enumeration. TC=0 only changed which
-delegate-derived types `CreateBaseType` walked up from. The lazy
-`Register` in `MyTypeTable.Serialize` handles the symptom directly
-and is independent of TC, so re-enabling TC=0 should not bring the
-mismatch back; if it does, look for new scan-time patches added since
-that assume plugin Init runs before `Preallocate`.
+see the 2026-05-26 entry. The root cause is plugin-load timing on
+the DS (the loader runs `Plugin.Init` after
+`MyTypeTable.RegisterFromAssemblies`), not TC-driven assembly
+enumeration. TC=0 only changed which delegate-derived types
+`CreateBaseType` walked up from. The scan-time `IsSerializableClass`
+prefix (now in the `"Finish"` category, applied before game init)
+fixes the table directly and is independent of TC, so re-enabling TC=0
+should not bring the mismatch back; if it does, look for new scan-time
+patches added since that assume plugin `Init` runs before the type
+table is built.
 
 **Upstream root cause** (what would actually fix this rather than
 work around it):
