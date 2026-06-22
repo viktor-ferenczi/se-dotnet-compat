@@ -29,16 +29,11 @@ REM Remove trailing backslash if applicable
 if "%NAME:~-1%"=="\" set NAME=%NAME:~0,-1%
 if "%SOURCE:~-1%"=="\" set SOURCE=%SOURCE:~0,-1%
 
-REM Verify Pulsar deployment and Local plugin folder
-REM Prefer Interim over Legacy when the Interim directory is present
-if exist "%AppData%\Pulsar\Interim" (
-    set PLUGIN_DIR=%AppData%\Pulsar\Interim\Local
-) else (
-    set PLUGIN_DIR=%AppData%\Pulsar\Legacy\Local
-)
+REM Verify Magnetar deployment and Local plugin folder
+set PLUGIN_DIR=%AppData%\Magnetar\Interim\Local
 if not exist "%PLUGIN_DIR%" (
     echo "Missing Local plugin folder: %PLUGIN_DIR%"
-    echo "Pulsar not installed?"
+    echo "Magnetar not installed?"
     exit /b 2
 )
 
@@ -48,5 +43,14 @@ copy /y "%SOURCE%\%NAME%" "%PLUGIN_DIR%\"
 if %ERRORLEVEL% NEQ 0 (
     echo ERROR: Could not copy "%NAME%".
     exit /b 1
+)
+
+REM Copy Bin dependencies if they exist
+set "BIN_SRC=%SOURCE%\Bin"
+set "BIN_DST=%PLUGIN_DIR%\Bin"
+if exist "%BIN_SRC%" (
+    if not exist "!BIN_DST!" mkdir "!BIN_DST!"
+    echo Copying Bin dependencies from "%BIN_SRC%" to "!BIN_DST!\"
+    xcopy /y /q "%BIN_SRC%\*" "!BIN_DST!\"
 )
 exit /b 0
