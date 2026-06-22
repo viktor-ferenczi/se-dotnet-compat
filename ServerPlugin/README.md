@@ -50,6 +50,8 @@ ServerPlugin/
 │   ├── Miscellaneous/
 │   │   ├── MyGridShapePatch.cs                AddShapesFromCollector replacement (avoids stackalloc crash)
 │   │   └── MyTypeTablePatch.cs                IsSerializableClass / Serialize replacements (network replication compat)
+│   ├── Networking/
+│   │   └── CrossPlatformEosPatch.cs          Switches NetworkType to eos for CrossPlatform worlds (crossplay hosting)
 │   ├── NullSafety/
 │   │   ├── MyAnalyticsBasePatch.cs            Disables ReportEvent
 │   │   ├── MyCharacterDiscoveryComponentPatch.cs   Skips OnFactionDiscovered on null player
@@ -62,6 +64,7 @@ ServerPlugin/
 │   │   ├── MySpaceGameDefaultIlCompilerPatch.cs   InitIlCompiler replacement
 │   │   └── PerfCountingRewriterPatch.cs       Disables PerfCountingRewriter.Rewrite
 │   ├── Serialization/
+│   │   ├── MyInventoryHelperPatch.cs          NRBF read/write for inventory check data (BinaryFormatter is gone on .NET 10; EOS join handshake)
 │   │   ├── StreamReadPatch.cs                 Stream.Read retry transpiler (multiple targets)
 │   │   └── XmlSerializationPrepatch.cs        Cecil prepatch for VRage XML helpers (hashes c8bac690 / 320acfb0)
 │   └── Windows/
@@ -115,7 +118,6 @@ dedicated server (or aren't needed yet):
 - `Patches/NullSafety/MyRenderContextStatisticsPatch` — render statistics
 - `Patches/Scripting/MyDependencyCollectorTpaPatch`, `Patches/Scripting/MyVisualSyntaxFunctionNodeNetCoreLookupPatch`
   — visual-scripting (Frostbite) compile fixes, not yet ported
-- `Patches/Serialization/MyInventoryHelperPatch` — Steam inventory (client only)
 - `MySandboxGamePatch.OnDotNetHotfixPopupClosed` — modal GUI prompt
 
 Server-only additions with no ClientPlugin equivalent:
@@ -124,6 +126,33 @@ Server-only additions with no ClientPlugin equivalent:
 - `Patches/Windows/WindowsServicePrepatch` — strips the Windows Service host out of `VRage.Dedicated`
 - `Patches/Windows/MyProgramPrepatch` — strips the WinForms/Drawing configurator block out of the DS
   entry point `MyProgram.Main` (removes the `System.Windows.Forms` / `System.Drawing` dependency)
+- `Patches/Networking/CrossPlatformEosPatch` — hosts crossplay worlds over EOS (see below)
+
+## Crossplay (EOS) hosting
+
+A crossplay dedicated server has to advertise itself on EOS so that EOS/console
+players (and, via the ClientPlugin EOS-connect fix, Steam players too) can find
+and join it. Stock SE only initializes EOS networking when the config
+`NetworkType` is `eos` (or `-eos` is passed); the `CrossPlatform` flag alone only
+marks the world's content as console-compatible and leaves the transport on
+Steam, so a `CrossPlatform` world hosted with the default `NetworkType=steam`
+registers on Steam only and is invisible to crossplay clients.
+
+Two server patches make crossplay hosting work on the .NET 10 server:
+
+- `Patches/Networking/CrossPlatformEosPatch` — postfix on `DedicatedServer.InitConsoleCompatibility`
+  (which runs right after `ConfigDedicated.Load()` and right before `InitializeServices`). When the
+  world has `CrossPlatform=true` it sets `NetworkType=eos`, so `MyProgram.IsEOS()` returns true and the
+  DS brings up `MyEOSService` / `MyEOSGameServer` and creates the public advertised EOS lobby that
+  crossplay clients discover. Hosting with an explicit `NetworkType=eos` keeps working unchanged.
+- `Patches/Serialization/MyInventoryHelperPatch` — ported verbatim from ClientPlugin. In EOS mode the
+  DS uses `MyMockingInventory`, which calls `MyInventoryHelper.GetItemsCheckData` /
+  `GetItemCheckData` / `CheckItemData` during the EOS join handshake; those use `BinaryFormatter`,
+  which throws on .NET 10. The patch replaces them with manual NRBF write / `NrbfDecoder` read so
+  EOS clients can join.
+
+The EOS SDK native library (`EOSSDK-Shipping.dll` → `libEOSSDK-Linux-Shipping.so`) is resolved by
+Magnetar's `NativeLibraryPreloader`, so no native-lib handling is needed here.
 
 `Preloader.TargetDLLs` covers the game assemblies prepatched on the server: `HavokWrapper,
 Sandbox.Common, Sandbox.Game, Sandbox.Graphics, SpaceEngineers.Game, VRage, VRage.Game, VRage.Library,
