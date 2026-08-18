@@ -18,64 +18,18 @@ Build via the solution:
 dotnet build DotNetCompat.sln -c Debug
 ```
 
-The post-build step (`Deploy.bat`) copies `DotNetCompat.dll` into `%AppData%\Magnetar\Interim\Local`.
-
 It is intended to be loaded by Magnetar, a Pulsar-equivalent loader for the Dedicated Server.
 
 ## Project layout
 
 ```
-ServerPlugin/
-├── ServerPlugin.cs                    IPlugin entry point (Harmony PatchCategory "Init")
-├── Preloader.cs                       Preloader entry: TargetDLLs + Patch (Cecil) / Finish (Harmony "Finish")
-├── App.config                         Binding redirects (copied verbatim from ClientPlugin)
-├── Deploy.bat                         Post-build deploy to %AppData%\Magnetar\Interim\Local
-├── ServerPlugin.csproj                net10.0; DS64 references; publicizer/Harmony/Cecil
-├── Tools/
-│   ├── GameAssembliesToPublicize.cs   IgnoresAccessChecksTo attributes for SE assemblies
-│   ├── IgnoresAccessChecksToAttribute.cs
-│   ├── Hashing.cs                     IL hash helper for VerifyCodeHash
-│   ├── PreloaderHelpers.cs            Cecil IL record/verify helpers
-│   └── TranspilerHelpers.cs           Harmony IL record helpers
-├── Patches/
-│   ├── Analytics/
-│   │   └── MySpaceAnalyticsPatch.cs           Disables StartSession
-│   ├── CrashReporting/
-│   │   ├── MyCrashReportingPatch.cs           Disables PrepareCrashAnalyticsReporting / ExtractCrashAnalyticsReport
-│   │   ├── MyInitializerPatch.cs              Transpiler for InitExceptionHandling (hash 0561eef4)
-│   │   ├── MySandboxGamePatch.cs              InitModAPI replacement (GUI hotfix popup dropped)
-│   │   └── MyWindowsWindowsPatch.cs           Redirects MessageBox dialogs to stderr (headless server)
-│   ├── ImageProcessing/
-│   │   └── DecodePixelDataPrepatch.cs         Cecil prepatch on SixLabors.ImageSharp PngDecoderCore (hash 8e787d98)
-│   ├── Miscellaneous/
-│   │   ├── MyGridShapePatch.cs                AddShapesFromCollector replacement (avoids stackalloc crash)
-│   │   └── MyTypeTablePatch.cs                IsSerializableClass / Serialize replacements (network replication compat)
-│   ├── Networking/
-│   │   └── CrossPlatformEosPatch.cs          Switches NetworkType to eos for CrossPlatform worlds (crossplay hosting)
-│   ├── NullSafety/
-│   │   ├── MyAnalyticsBasePatch.cs            Disables ReportEvent
-│   │   ├── MyCharacterDiscoveryComponentPatch.cs   Skips OnFactionDiscovered on null player
-│   │   ├── MyHeightMapLoadingSystemPrepatch.cs     Cecil prepatch on Sandbox.Game (hash 62847c5b)
-│   │   └── MyPropertySyncStateGroupPatch.cs        Constructor null check for MyMultiplayer.Static
-│   ├── Scripting/
-│   │   ├── MyScriptCompilerPatch.cs           AddReferencedAssemblies / AddImplicitInGameNamespacesFromTypes
-│   │   ├── MyScriptWhitelistPatch.cs          ResolveTypeSymbol fix for generic types
-│   │   ├── MySpaceGameDefaultIlCheckerPatch.cs    AllDeclaredMembers / AllowDefaultNamespaces replacements
-│   │   ├── MySpaceGameDefaultIlCompilerPatch.cs   InitIlCompiler replacement
-│   │   └── PerfCountingRewriterPatch.cs       Disables PerfCountingRewriter.Rewrite
-│   ├── Serialization/
-│   │   ├── MyInventoryHelperPatch.cs          NRBF read/write for inventory check data (BinaryFormatter is gone on .NET 10; EOS join handshake)
-│   │   ├── StreamReadPatch.cs                 Stream.Read retry transpiler (multiple targets)
-│   │   └── XmlSerializationPrepatch.cs        Cecil prepatch for VRage XML helpers (hashes c8bac690 / 320acfb0)
-│   └── Windows/
-│       ├── MyFileProviderAggregatorPatch.cs   Sorts GetFiles result (Net48 implicit ordering)
-│       ├── MyProgramPrepatch.cs               Cecil prepatch stripping the WinForms/Drawing configurator block from SpaceEngineersDedicated.MyProgram.Main
-│       ├── MyWindowsSystemPatch.cs            GetOsName / LogEnvironmentInformation / GetInfoCPU patches
-│       └── WindowsServicePrepatch.cs          Cecil prepatch stripping Windows Service code from VRage.Dedicated
-└── Rewriter/
-    ├── CompilerHook.cs                        CSharpCompilation hook for extension method conflicts
-    ├── ConflictingExtensionCollector.cs       CSharpSyntaxWalker
-    └── ConflictingExtensionRewriter.cs        CSharpSyntaxRewriter
+Shared/                         Common patches, Roslyn rewriters, and IL tools
+ClientPlugin/                   Pulsar entry point and client-only patches
+ServerPlugin/                   Magnetar entry point and server-only patches
+├── ServerPlugin.cs             IPlugin entry point
+├── Preloader.cs                Cecil and early Harmony entry point
+├── Patches/                    Dedicated-server-only patches
+└── ServerPlugin.csproj         Server references and Shared source import
 ```
 
 ## How it works
@@ -110,7 +64,7 @@ These client patches were intentionally **not** ported — they target subsystem
 dedicated server (or aren't needed yet):
 
 - `Patches/Audio/MyPlatformAudioPatch`, `Patches/Audio/MyXAudio2Patch` — no audio playback on the server
-- `Patches/ImageProcessing/MyFileTextureImageCachePatch` — GPU texture cache (the `DecodePixelDataPrepatch`
+- `Patches/ImageProcessing/MyFileTextureImageCachePatch` — GPU texture cache (the shared `DecodePixelDataPrepatch`
   PNG fix in that folder **is** ported, since the server still decodes heightmaps)
 - `Patches/Miscellaneous/MyGuiScreenMainMenuBasePatch` — main menu GUI
 - `Patches/NullSafety/MyCharacterPatch` — client-side character builder
@@ -145,7 +99,7 @@ Two server patches make crossplay hosting work on the .NET 10 server:
   world has `CrossPlatform=true` it sets `NetworkType=eos`, so `MyProgram.IsEOS()` returns true and the
   DS brings up `MyEOSService` / `MyEOSGameServer` and creates the public advertised EOS lobby that
   crossplay clients discover. Hosting with an explicit `NetworkType=eos` keeps working unchanged.
-- `Patches/Serialization/MyInventoryHelperPatch` — ported verbatim from ClientPlugin. In EOS mode the
+- `Shared/Patches/Serialization/MyInventoryHelperPatch` — shared with ClientPlugin. In EOS mode the
   DS uses `MyMockingInventory`, which calls `MyInventoryHelper.GetItemsCheckData` /
   `GetItemCheckData` / `CheckItemData` during the EOS join handshake; those use `BinaryFormatter`,
   which throws on .NET 10. The patch replaces them with manual NRBF write / `NrbfDecoder` read so
@@ -168,7 +122,7 @@ Pulled in via `ServerPlugin.csproj`:
 - `AssemblyName`: `DotNetCompat` (same as client — they are independent assemblies in different folders)
 - `RootNamespace`: `ServerPlugin`
 - `LangVersion`: 13
-- `DefineConstants`: `DEBUG;TRACE;DEV_BUILD` (Debug) / `TRACE;DEV_BUILD` (Release)
+- `DefineConstants`: includes `DEDICATED` so shared code can retain server-specific patch timing and public type names
 - `EnableUnsafeBinaryFormatterSerialization=true` — required for `List<MyGameInventoryItem>`
   serialization in `VRage.GameServices.MyInventoryHelper` (deserialization is patched to use
   `NrbfDecoder`).
@@ -185,10 +139,8 @@ NuGet packages:
 - `System.Diagnostics.PerformanceCounter` 9.0.0 — referenced by `VRage.Platform.Windows`
   `MyWindowsSystem.Init`; not in the plain net10.0 framework
 
-The last three are not real compile-time dependencies of the plugin — they are shipped so the **game's**
-net48 code can resolve them at runtime on a plain net10.0 host. They are copied into `Bin` by
-`CopyBinDependencies` and explicitly loaded by `Preloader.Finish` (the same DLLs are declared in
-`DotNetCompatServer.xml`'s `<NuGetReferences>` for the source-built GitHub plugin path).
+The last three support the game's .NET Framework references on a plain net10.0 host. Magnetar stages
+them from `DotNetCompatServer.xml`, and `Preloader` resolves them by name when requested.
 
 Publicized assemblies: `Sandbox.Game, Sandbox.Graphics, Sandbox.ObjectBuilders, SpaceEngineers,
 SpaceEngineers.Game, VRage, VRage.Audio, VRage.Dedicated, VRage.EOS, VRage.Network,
@@ -197,19 +149,6 @@ VRage.Platform.Windows, VRage.Render11, VRage.Scripting`.
 A `DoNotPublicize` list excludes a handful of GUI events whose private accessors clash with the
 publicizer's rewriting (carried over from the client config — harmless on the server).
 
-Build events:
+## Notes
 
-- **Pre-build**: `verify_props.bat` checks that `$(DS64)` resolves to a real folder.
-- **`CopyBinDependencies` (after Build, before PostBuildEvent)**: copies `System.Management.dll`,
-  `System.Drawing.Common.dll` and `System.Diagnostics.PerformanceCounter.dll` into `$(OutputPath)Bin`
-  so they can be shipped with the plugin; `Preloader.Finish` loads them from `Bin` at runtime. Runs
-  before the post-build deploy so `Bin` is populated when `Deploy.bat` copies it.
-- **Post-build**: `Deploy.bat` copies `DotNetCompat.dll` and the `Bin` dependencies to
-  `%AppData%\Magnetar\Interim\Local`.
-
-## Notes / open items
-
-- A Pulsar-equivalent plugin loader for the Dedicated Server (Magnetar) is required for the post-build
-  deploy to succeed and for the plugin to be loaded at runtime.
-- Code is currently duplicated between `ClientPlugin` and `ServerPlugin`. Extracting a shared project
-  is intentionally deferred until both plugins are stable.
+A Pulsar-equivalent plugin loader for the Dedicated Server (Magnetar) is required for post-build deployment and runtime loading.

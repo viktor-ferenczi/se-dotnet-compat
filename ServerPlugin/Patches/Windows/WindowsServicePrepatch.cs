@@ -53,7 +53,6 @@ public static class WindowsServicePrepatch
         if (type == null)
             return;
 
-        // Remove the ServiceController field from the nested Instance class
         var instanceType = type.NestedTypes.FirstOrDefault(t => t.Name == "Instance");
         if (instanceType != null)
         {
@@ -64,7 +63,6 @@ public static class WindowsServicePrepatch
             }
         }
 
-        // Gut all methods that reference ServiceController types
         foreach (var method in type.Methods)
         {
             if (!method.HasBody)
@@ -87,8 +85,7 @@ public static class WindowsServicePrepatch
 
         var instructions = initMethod.Body.Instructions;
 
-        // Remove MaximumSize and MinimumSize property setter calls,
-        // so DPI-based auto-scaling can resize the form freely
+        // Fixed min/max sizes break the form after DPI scaling.
         for (var i = 0; i < instructions.Count; i++)
         {
             var instr = instructions[i];
@@ -101,8 +98,7 @@ public static class WindowsServicePrepatch
             if (setter.Name != "set_MaximumSize" && setter.Name != "set_MinimumSize")
                 continue;
 
-            // NOP the setter call and its arguments:
-            // ldarg.0, ldc.i4 width, ldc.i4 height, newobj Size, call set_*Size
+            // The four preceding instructions build the Size argument and load this.
             for (var j = i; j >= 0 && j > i - 5; j--)
             {
                 instructions[j] = Instruction.Create(OpCodes.Nop);

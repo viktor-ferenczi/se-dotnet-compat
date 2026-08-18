@@ -6,18 +6,14 @@
         <AssemblyName>DotNetCompat</AssemblyName>
         <LangVersion>13</LangVersion>
 
-        <!-- Ensure SDK generates assembly attributes (no need for AssemblyInfo) -->
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
-        <!-- Default versions; override in Directory.Build.props  -->
         <AssemblyVersion>10.0.5.0</AssemblyVersion>
         <FileVersion>10.0.5.0</FileVersion>
 
-        <!-- Default configuration if none supplied -->
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 
-        <!-- Keep original behaviour for post/pre build events -->
         <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
     </PropertyGroup>
 
@@ -226,9 +222,9 @@
     </ItemGroup>
 
     <PropertyGroup>
-        <!-- Required for Serialization of List<MyGameInventoryItem> in VRage.GameServices.MyInventoryHelper -->
-        <!-- Deserialization is patched to use safer NrbfDecoder instead -->
+        <!-- BinaryFormatter writes inventory data; NrbfDecoder handles reads. -->
         <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
     </PropertyGroup>
     
+    <Import Project="../Shared/Shared.projitems" Label="Shared" />
 </Project>

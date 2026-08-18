@@ -1,7 +1,7 @@
 using HarmonyLib;
 using VRage.Plugins;
 
-// Set the assembly version manually if compiled by a Pulsar-equivalent loader (it won't create what was in AssemblyInfo.cs before)
+// Magnetar does not generate the assembly version from the project file.
 #if PULSAR
 using System.Reflection;
 
@@ -11,7 +11,6 @@ using System.Reflection;
 
 namespace ServerPlugin;
 
-// ReSharper disable once UnusedType.Global
 public class Plugin : IPlugin
 {
     public const string Name = "DotNetCompat";

@@ -1,30 +1,23 @@
-﻿// ReSharper disable CheckNamespace
-// ReSharper disable InconsistentNaming
-
-using System;
+﻿using System;
 using System.Reflection;
 using System.Collections.Generic;
-using ClientPlugin.Patches.ImageProcessing;
-using ClientPlugin.Patches.NullSafety;
-using ClientPlugin.Patches.Serialization;
 using HarmonyLib;
 using Mono.Cecil;
+using Shared.Patches.ImageProcessing;
+using Shared.Patches.NullSafety;
+using Shared.Patches.Serialization;
 
-// IMPORTANT: MUST NOT USE A NAMESPACE, otherwise Pulsar won't find the Preloader class! 
-//namespace ClientPlugin;
+// Pulsar requires Preloader in the global namespace.
 
-// ReSharper disable once UnusedType.Global
 public static class Preloader
 {
-    // Assembly names this plugin overrides via AssemblyResolve. Loaded from the
-    // plugin's NuGet dependencies (staged by Pulsar into the plugin Bin folder).
+    // Pulsar stages these NuGet dependencies and loads them by name.
     private static readonly HashSet<string> OverriddenAssemblies = new(StringComparer.Ordinal)
     {
         "System.Management",
     };
 
-    // Tracks assembly names currently being resolved on this thread to break
-    // AssemblyResolve recursion. See ResolveOverriddenAssembly for details.
+    // Assembly.Load can re-enter AssemblyResolve, so track names per thread.
     [System.ThreadStatic]
     private static HashSet<string> _resolvingTls;
     private static HashSet<string> Resolving =>
@@ -36,11 +29,6 @@ public static class Preloader
         if (!OverriddenAssemblies.Contains(targetName))
             return null;
 
-        // Re-entry guard: Assembly.Load(name) fires AssemblyResolve again if the
-        // runtime can't bind the name to a TPA/probe path. Without a guard the
-        // handler recurses until the stack overflows (exit code 0xC00000FD) with
-        // no useful diagnostic. If we re-enter for the same name, bail with a
-        // clear error instead.
         if (!Resolving.Add(targetName))
         {
             Console.Error.WriteLine(
@@ -66,7 +54,6 @@ public static class Preloader
         }
     }
 
-    // ReSharper disable once UnusedMember.Global
     public static IEnumerable<string> TargetDLLs { get; } =
     [
         // Game DLLs
@@ -94,7 +81,6 @@ public static class Preloader
         "SixLabors.ImageSharp.dll"
     ];
 
-    // ReSharper disable once UnusedMember.Global
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     public static void Patch(AssemblyDefinition asmDef)
     {
@@ -105,36 +91,18 @@ public static class Preloader
         XmlSerializationPrepatch.Prepatch(asmDef);
     }
 
-    // ReSharper disable once UnusedMember.Global
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     public static void Finish()
     {
         // See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
         AppContext.SetSwitch("System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization", true);
 
-        // Fixes runtime loading the Keen version in some cases by initializing it explicitly
+        // Load this before the game can bind to Keen's copy.
         Assembly.Load("System.Collections.Immutable");
 
-        // JIT-prewarm the Directory.Enumerate* call chain on the main thread.
-        //
-        // MonoMod's V60 JIT hook (used by Harmony on .NET 6 layout) SEGVs on
-        // .NET 10 when CoreCLR re-enters compileMethod from a worker thread for
-        // the LibraryImportGenerator-emitted P/Invoke stub of the runtime's
-        // thread-static helpers (StaticsHelpers.<GetThreadStaticsByIndex>g____PInvoke).
-        // That stub is JIT'd on first use of Directory.EnumerateFiles /
-        // SharedArrayPool<char>.Rent. In a normal Pulsar startup the first use
-        // happens on a ParallelTasks worker inside MyXAudio2.Preload, which is
-        // exactly the racy context that trips the hook.
-        //
-        // Compiling the stub here, on the main thread, before any Harmony
-        // patching or parallel preload runs, removes the race entirely. The
-        // IL stub is process-wide JIT'd code (only the per-thread storage it
-        // accesses is per-thread), so subsequent first-touches from worker
-        // threads call the already-compiled stub and never re-enter
-        // compileMethod. See Docs/Fixes.md (2026-05-01 entry).
+        // JIT these stubs on the main thread before Harmony starts worker threads.
         PrewarmDirectoryEnumerationStubs();
         
-        // Override game DLLs with the versions added as NuGet dependency by this plugin
         AppDomain.CurrentDomain.AssemblyResolve += ResolveOverriddenAssembly;
         
 #if DEBUG && HARMONY_DEBUG
@@ -153,11 +121,6 @@ public static class Preloader
             if (string.IsNullOrEmpty(baseDir) || !System.IO.Directory.Exists(baseDir))
                 return;
 
-            // Iterating one entry is enough to JIT the FileSystemEnumerator<T>
-            // generic specialization, SharedArrayPool<char>.Rent, the lazy
-            // thread-static initializer for the array pool, and the P/Invoke
-            // stub the initializer reaches via StaticsHelpers — i.e. the full
-            // chain shown in the crashing core dump.
             using (var e = System.IO.Directory.EnumerateFiles(baseDir).GetEnumerator())
                 e.MoveNext();
             using (var e = System.IO.Directory.EnumerateDirectories(baseDir).GetEnumerator())
@@ -167,8 +130,7 @@ public static class Preloader
         }
         catch (Exception ex)
         {
-            // Pre-warm is purely preventative; a failure here is not fatal.
-            // Worst case the original race window is back.
+            // Failure is harmless, but leaves the JIT race unfixed.
             Console.WriteLine($"[DotNetCompat] Pre-warm of Directory.Enumerate* failed: {ex.GetType().Name}: {ex.Message}");
         }
     }

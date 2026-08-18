@@ -10,6 +10,8 @@ This repository ships **two** plugins:
   loaded by Magnetar. UI / audio / render-only patches are skipped on the server. 
   See [ServerPlugin/README.md](ServerPlugin/README.md) for details.
 
+Common patches, rewriters, and tools live in [`Shared/`](Shared/) and compile directly into both plugin assemblies.
+
 ## Prerequisites
 
 ### Client

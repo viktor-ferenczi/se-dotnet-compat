@@ -9,83 +9,14 @@ using VRage.Game.VisualScripting.ScriptBuilder.Nodes;
 
 namespace ClientPlugin.Patches.Scripting;
 
-// Fixes the Frostbite-scenario "Script: ... failed to build" failures
-// (ArgumentNullException at MyVisualScriptingProxy.IsSequenceDependent).
-//
-// Root cause (from the diagnostic patch in this folder, run 22:16 on
-// 2026-05-01):
-//
-//   .vs files store assembly-qualified type names with the legacy mscorlib
-//   token, e.g.
-//     System.Collections.Generic.List`1[[System.String, mscorlib,
-//       Version=4.0.0.0, Culture=neutral,
-//       PublicKeyToken=b77a5c561934e089]].Contains(String item)
-//
-//   On .NET 10 the actual `string` type lives in System.Private.CoreLib, so
-//   any MethodInfo.Signature() the proxy builds at runtime carries the
-//   System.Private.CoreLib qualifier (Version=10.0.0.0,
-//   PublicKeyToken=7cec85d7bea7798e).
-//
-//   MyVisualSyntaxFunctionNode's ctor (Decompiled/VRage.Scripting/.../
-//   MyVisualSyntaxFunctionNode.cs:33-85) tries four lookups, each ultimately
-//   doing a string compare between the saved (mscorlib) signature and the
-//   runtime (System.Private.CoreLib) signature. They never match, so
-//   m_methodInfo stays null, Preprocess crashes when it touches m_methodInfo,
-//   and every script that calls a method with a generic-instance parameter
-//   (or a stock SDK provider call whose param list contains one) fails to
-//   build. In Frostbite that's Mission01_MS, SetupPlayer, FollowPlayer,
-//   FrostbiteBark_*, WeatherCycle, Obj00_Setup, etc. — the mission state
-//   machine never advances and quest-log/notification calls never fire.
-//
-//   Type.GetType("...mscorlib...") DOES resolve correctly on .NET 10
-//   (returning a System.Private.CoreLib type via the runtime's mscorlib
-//   forwarding shim), so Type-level lookups in the chain work. Only the
-//   string-keyed signature comparisons miss.
-//
-// Diagnostic confirmed it's not a registration problem:
-//   GetMethods.Count grew 538 → 547 → 556 → 565 over the run as
-//   GetMethod(type, sig) calls primed the registry. Init/RegisterLogicProvider
-//   ran fine.
-//
-// Fix strategy: a single retry-postfix on the FunctionNode ctor that runs
-// AFTER all four original lookup steps and only triggers when m_methodInfo
-// is still null. It builds a normalized lookup key by stripping the
-// "AssemblyName, Version=..., Culture=..., PublicKeyToken=..." chunks from
-// inside [[ ... ]] brackets, then compares against the normalized
-// Signature() of every registered method. Stripping (vs. rewriting
-// mscorlib → System.Private.CoreLib) makes the fix stable across future
-// .NET version bumps — the comparison reduces to "same type name in same
-// namespace" regardless of which assembly the type lives in today.
-//
-// Two registries are searched: m_visualScriptingMethodsBySignature (via
-// MyVisualScriptingProxy.GetMethods(), the proxy's flat string→method map)
-// and m_whitelistedMethods (via GetWhitelistedMethods(null), the per-type
-// HashSets that hold closed-form generic instances built by
-// GetWhitelistedMethods(closedType) — that's where extension methods like
-// MyVSCollectionExtensions.At<long> end up after MakeGenericMethod).
-//
-// Before searching, the patch primes the registry by re-issuing
-// GetMethod(extType, sig) and GetMethod(declType, sig). The original ctor
-// only invokes those when earlier steps fall through; re-running them here
-// is idempotent (cached per-Type) and ensures the closed-generic forms are
-// in m_whitelistedMethods before we iterate.
-//
-// Diagnostic patch in this folder (MyVisualSyntaxFunctionNodeDiagnosticPatch)
-// continues to log when m_methodInfo is still null after this retry — i.e.
-// it now serves as a regression detector. With this patch in place the
-// expected log volume is zero.
+// Visual scripts store mscorlib in method signatures, but .NET 10 reports
+// System.Private.CoreLib. Strip the assembly details before comparing them.
 [HarmonyPatch(typeof(MyVisualSyntaxFunctionNode), MethodType.Constructor,
     typeof(MyObjectBuilder_ScriptNode), typeof(Type))]
 [HarmonyPatchCategory("Finish")]
 static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
 {
-    // Strips the assembly-qualifier portion from inside [[ ... ]] brackets.
-    // Matches one comma-prefixed run of the canonical four fields that
-    // AssemblyQualifiedName produces:
-    //     , <AsmName>, Version=N.N.N.N, Culture=<id>, PublicKeyToken=<hex|null>
-    // Both the saved (mscorlib, 4.0.0.0, b77a5c561934e089) form and the
-    // runtime (System.Private.CoreLib, 10.0.0.0, 7cec85d7bea7798e) form are
-    // matched and removed, leaving e.g.  [[System.String]].
+    // Matches the assembly portion of a generic argument's qualified name.
     private static readonly Regex s_asmQualifier = new Regex(
         @", [\w.]+, Version=\d+\.\d+\.\d+\.\d+, Culture=\w+, PublicKeyToken=(?:[a-fA-F0-9]+|null)",
         RegexOptions.Compiled);
@@ -93,10 +24,7 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
     private static FieldInfo s_methodInfoField;
     private static MethodInfo s_initUsingMethod;
 
-    // Index of normalized Signature() → MethodInfo, rebuilt when the union
-    // registry size changes. The proxy grows the registry as
-    // GetWhitelistedMethods(closedGeneric) is called for new types
-    // throughout session load, so we can't index once and forget.
+    // The game registers more closed generic methods while loading a session.
     private static Dictionary<string, MethodInfo> s_normalizedIndex;
     private static int s_indexedRegistrySize = -1;
 
@@ -113,9 +41,6 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
         if (fn == null || string.IsNullOrEmpty(fn.Type))
             return;
 
-        // Fast skip: if the saved signature carries no assembly qualifier,
-        // the original lookup chain was already definitive and our
-        // normalization can't help.
         string targetSig = NormalizeAssemblyQualifiers(fn.Type);
         if (ReferenceEquals(targetSig, fn.Type) || targetSig == fn.Type)
             return;
@@ -134,18 +59,13 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
                 "MyVisualSyntaxFunctionNode.m_methodInfo not found");
         s_methodInfoField.SetValue(__instance, found);
 
-        // Re-run the private InitUsing() the original ctor would have
-        // called if the lookup had succeeded — it sets the
-        // UsingDirectiveSyntax used by code generation.
+        // The constructor normally calls InitUsing after a successful lookup.
         s_initUsingMethod ??= AccessTools.Method(typeof(MyVisualSyntaxFunctionNode), "InitUsing");
         try { s_initUsingMethod?.Invoke(__instance, null); }
-        catch { /* best-effort; codegen falls back to no using */ }
+        catch { }
     }
 
-    // For closed-generic extension methods (e.g. MyVSCollectionExtensions.At<long>),
-    // the closed form only enters m_whitelistedMethods when GetWhitelistedMethods
-    // is called with the closed first-parameter type — that's what the ctor's
-    // step-4 path does. Replay it here so the index includes the closed form.
+    // Looking up the declaring type makes the game register closed generic methods.
     private static void PrimeRegistryFor(string typeName, string sigToProbe)
     {
         if (string.IsNullOrEmpty(typeName))
@@ -158,7 +78,6 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
         }
         catch
         {
-            // Priming is best-effort; the lookup below is the source of truth.
         }
     }
 
@@ -184,21 +103,7 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
         return found;
     }
 
-    // Mirrors the original ctor's step-3 fallback (line 67 of
-    // MyVisualSyntaxFunctionNode.cs:
-    //   foreach (MethodInfo method in MyVisualScriptingProxy.GetMethods())
-    //       if (method.Signature().StartsWith(value)) ...
-    // ) but on normalized signatures, and also covering the
-    // m_whitelistedMethods registry. This catches cases where the saved
-    // signature has fewer parameters than the current runtime method —
-    // e.g. MyVisualScriptLogicProvider.StoreStringList(String, List<String>)
-    // whose runtime form gained two trailing optional params
-    // (String secondaryKey, Boolean isStatic). Without the StartsWith
-    // fallback such .vs files cannot bind to the live method at all.
-    //
-    // The boundary check ('next char is ',' or ')') prevents a saved
-    // prefix from matching mid-parameter (e.g. "Foo(int a" must not match
-    // "Foo(int able)").
+    // The stock code also accepts a saved signature missing new optional parameters.
     private static MethodInfo LookupByNormalizedPrefix(string targetSig)
     {
         int closeIdx = targetSig.LastIndexOf(')');
@@ -247,19 +152,12 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
         try
         {
             var key = NormalizeAssemblyQualifiers(m.Signature());
-            // Last writer wins on collisions — closed-generic forms are
-            // appended to the registry after open generics, so they
-            // overwrite the (less useful) open-form key. Open generics
-            // produce malformed Signature() strings on .NET (FullName is
-            // null for open generic types), so keeping them keyed under
-            // the malformed string is harmless.
+            // Closed generic methods are registered later and should win collisions.
             if (!string.IsNullOrEmpty(key))
                 idx[key] = m;
         }
         catch
         {
-            // Skip methods whose Signature() throws (e.g. DeclaringType=null
-            // on dynamic methods).
         }
     }
 

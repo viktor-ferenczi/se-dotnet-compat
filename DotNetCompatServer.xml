@@ -16,6 +16,7 @@ It is added by Magnetar automatically on demand.
 </Description>
 
     <SourceDirectories>
+        <Directory>Shared</Directory>
         <Directory>ServerPlugin</Directory>
     </SourceDirectories>
 

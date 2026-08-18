@@ -16,26 +16,19 @@ namespace ClientPlugin.Patches.Miscellaneous;
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public static class MyTypeTablePatch
 {
-    // ReSharper disable once UnusedMember.Local
     [HarmonyPrefix]
     [HarmonyPatch("IsSerializableClass")]
     private static bool IsSerializableClassPrefix(Type type, out bool __result)
     {
-        // Replication layer compatibility with the original server
-        // These two items are present in the type table on .NET Framework 4.8
+        // These types lost Serializable after .NET Framework.
         __result = type.FullName is "System.Delegate" or "System.MulticastDelegate"
 
-                   // Otherwise use the original check
                    || (type.HasAttribute<SerializableAttribute>() && !type.HasAttribute<CompilerGeneratedAttribute>())
                    || type.IsEnum || typeof(MulticastDelegate).IsAssignableFrom(type.BaseType);
 
-        // Skip the original implementation
         return false;
     }
 
-    // Serializes id to hash list.
-    // Server sends the hashlist to client, client reorders type table to same order as server.
-    // ReSharper disable once UnusedMember.Local
     [HarmonyPrefix]
     [HarmonyPatch("Serialize")]
     private static bool SerializePrefix(
@@ -44,27 +37,22 @@ public static class MyTypeTablePatch
         ref MyEventTable ___m_staticEventTable,
         Dictionary<int, MySynchronizedTypeInfo> ___m_hashLookup)
     {
-        // Replacement implementation with additional error handling to catch issues with the replication tables
-
         if (stream.Writing)
         {
             stream.WriteVariant((uint)___m_idToType.Count);
             foreach (var t in ___m_idToType) stream.WriteInt32(t.TypeHash);
 
-            // Skip the original implementation
             return false;
         }
 
         var num = (int)stream.ReadUInt32Variant();
         if (___m_idToType.Count != num)
         {
-            // Read the server's hash list so we can report which types differ before bailing.
-            // The stream is consumed regardless; we cannot recover the connection from here.
+            // Read the server list before failing so the log can show the difference.
             var serverHashes = new int[num];
             for (var i = 0; i < num; i++) serverHashes[i] = stream.ReadInt32();
             LogTypeTableMismatch(serverHashes, ___m_idToType, ___m_hashLookup);
 
-            // This is a fatal error condition, because of m_idToType[j] in the logic below
             throw new Exception($"Bad number of types from server. Received {num}, have {___m_idToType.Count}");
         }
 
@@ -84,7 +72,6 @@ public static class MyTypeTablePatch
             if (___m_idToType[i] == null)
                 throw new Exception($"Type ID {i} is missing after the reordering based on server response");
 
-        // Skip the original implementation
         return false;
     }
 
@@ -105,9 +92,6 @@ public static class MyTypeTablePatch
 
         foreach (var hash in serverOnly)
         {
-            // Server-only hashes correspond to types the client has not registered.
-            // We may still find the hash in the client's hash lookup if the type exists
-            // but is not in m_idToType for some reason; report that case explicitly.
             var name = hashLookup.TryGetValue(hash, out var info) && info.Type != null
                 ? info.Type.FullName + " (in hashLookup but not idToType)"
                 : "<unknown type>";

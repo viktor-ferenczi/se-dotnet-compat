@@ -16,6 +16,7 @@ It is added by Pulsar automatically on demand.
 </Description>
 
     <SourceDirectories>
+        <Directory>Shared</Directory>
         <Directory>ClientPlugin</Directory>
     </SourceDirectories>
 

@@ -6,19 +6,16 @@
         <AssemblyName>DotNetCompat</AssemblyName>
         <LangVersion>13</LangVersion>
 
-        <!-- Ensure SDK generates assembly attributes (no need for AssemblyInfo) -->
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 
-        <!-- Default versions; override in Directory.Build.props  -->
         <AssemblyVersion>10.0.0.0</AssemblyVersion>
         <FileVersion>10.0.0.0</FileVersion>
 
-        <!-- Default configuration if none supplied -->
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 
-        <!-- Keep original behaviour for post/pre build events -->
         <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+        <DefineConstants>$(DefineConstants);DEDICATED</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>
@@ -193,15 +190,9 @@
         <PackageReference Include="Mono.Cecil" Version="0.11.6"/>
         <PackageReference Include="System.Formats.Nrbf" Version="10.0.1" />
         <PackageReference Include="System.Management" Version="4.5.0" GeneratePathProperty="true" />
-        <!-- The game's net48 code references System.Drawing (GAC), which type-forwards to
-             System.Drawing.Common on .NET. It used to be provided by the WindowsDesktop shared
-             framework; on a plain net10.0 host it must be supplied explicitly. Loaded from Bin
-             by the Preloader (see Preloader.Finish) like System.Management. -->
+        <!-- The game still references this .NET Framework assembly at runtime. -->
         <PackageReference Include="System.Drawing.Common" Version="6.0.0" GeneratePathProperty="true" />
-        <!-- The game's net48 code references System.Diagnostics.PerformanceCounter (GAC),
-             used by VRage.Platform.Windows MyWindowsSystem.Init for process/perf metrics.
-             Not in the plain net10.0 shared framework, so supplied explicitly and loaded
-             from Bin by the Preloader (see Preloader.Finish) like System.Management. -->
+        <!-- VRage.Platform.Windows loads this assembly at runtime. -->
         <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" GeneratePathProperty="true" />
     </ItemGroup>
 
@@ -241,9 +232,9 @@
     </ItemGroup>
 
     <PropertyGroup>
-        <!-- Required for Serialization of List<MyGameInventoryItem> in VRage.GameServices.MyInventoryHelper -->
-        <!-- Deserialization is patched to use safer NrbfDecoder instead -->
+        <!-- BinaryFormatter writes inventory data; NrbfDecoder handles reads. -->
         <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
     </PropertyGroup>
 
+    <Import Project="../Shared/Shared.projitems" Label="Shared" />
 </Project>
