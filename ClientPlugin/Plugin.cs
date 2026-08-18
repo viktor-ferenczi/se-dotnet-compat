@@ -2,7 +2,7 @@
 using VRage.Plugins;
 
 // Set the assembly version manually if compiled by Pulsar (it won't create what was in AssemblyInfo.cs before)
-#if !DEV_BUILD
+#if PULSAR
 using System.Reflection;
 
 [assembly: AssemblyVersion("10.0.5.0")]
