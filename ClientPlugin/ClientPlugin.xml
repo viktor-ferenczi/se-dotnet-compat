@@ -1,19 +1,14 @@
 <?xml version="1.0"?>
 <PluginData xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="GitHubPlugin">
 
-    <Id>se-dotnet-compat</Id>
-    <GroupId>se-dotnet-compat</GroupId>
-    <RepoId>viktor-ferenczi/se-dotnet-compat</RepoId>
+    <Id>dotnet-compat</Id>
+    <RepoId>CometWorks/dotnet-compat</RepoId>
 
     <FriendlyName>DotNetCompat</FriendlyName>
     <Author>Viktor</Author>
 
-    <Tooltip>Compatibility with .NET 10.0</Tooltip>
-    <Description>Support plugin for Pulsar to run the game on .NET 10.0.
-        
-Do NOT add this plugin manually, it won't work.
-It is added by Pulsar automatically on demand.
-</Description>
+    <Tooltip>.NET 10.0 support for Space Engineers</Tooltip>
+    <Description>Patches Space Engineers to run on .NET 10.0. The plugin loads automatically when needed.</Description>
 
     <SourceDirectories>
         <Directory>Shared</Directory>
@@ -25,10 +20,8 @@ It is added by Pulsar automatically on demand.
 		<PackageReference Include="System.Formats.Nrbf" Version="10.0.1" />
 	</NuGetReferences>	
 
-    <Runtimes>NETCoreApp</Runtimes>
-
+    <Runtimes>CoreCLR</Runtimes>
     <Hidden>true</Hidden>
-    
     <Commit>TODO</Commit>
 
 </PluginData>

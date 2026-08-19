@@ -188,7 +188,7 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Mono.Cecil" Version="0.11.6"/>
-        <PackageReference Include="System.Formats.Nrbf" Version="10.0.1" />
+        <PackageReference Include="System.Formats.Nrbf" Version="10.0.1" GeneratePathProperty="true" />
         <PackageReference Include="System.Management" Version="4.5.0" GeneratePathProperty="true" />
         <!-- The game still references this .NET Framework assembly at runtime. -->
         <PackageReference Include="System.Drawing.Common" Version="6.0.0" GeneratePathProperty="true" />
@@ -235,6 +235,26 @@
         <!-- BinaryFormatter writes inventory data; NrbfDecoder handles reads. -->
         <EnableUnsafeBinaryFormatterSerialization>true</EnableUnsafeBinaryFormatterSerialization>
     </PropertyGroup>
+
+    <Target Name="ValidateDS64" BeforeTargets="PrepareForBuild">
+        <Error Condition="!Exists('$(DS64)')" Text="Specify SpaceEngineers DedicatedServer64 path!" />
+        <Warning Condition="'$(Magnetar)' == ''" Text="Skipping deployment due to unset Magnetar folder!" />
+    </Target>
+
+    <Target Name="DeployPlugin" AfterTargets="Build" Condition="'$(Magnetar)' != ''">
+        <PropertyGroup>
+            <FolderName>Legacy</FolderName>
+            <FolderName Condition="Exists('$(Magnetar)/Interim')">Interim</FolderName>
+            <PluginDirectory>$(Magnetar)/$(FolderName)/Local/dotnet-compat</PluginDirectory>
+        </PropertyGroup>
+        <MakeDir Directories="$(PluginDirectory)" />
+        <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(PluginDirectory)/plugin.dll" />
+        <Copy SourceFiles="$(PkgSystem_Management)/runtimes/win/lib/netcoreapp2.0/System.Management.dll" DestinationFolder="$(PluginDirectory)" />
+        <Copy SourceFiles="$(PkgSystem_Formats_Nrbf)/lib/net10.0/System.Formats.Nrbf.dll" DestinationFolder="$(PluginDirectory)" />
+        <Copy SourceFiles="$(PkgSystem_Drawing_Common)/runtimes/win/lib/net6.0/System.Drawing.Common.dll" DestinationFolder="$(PluginDirectory)" />
+        <Copy SourceFiles="$(PkgSystem_Diagnostics_PerformanceCounter)/runtimes/win/lib/net9.0/System.Diagnostics.PerformanceCounter.dll" DestinationFolder="$(PluginDirectory)" />
+        <Copy SourceFiles="$(MSBuildProjectDirectory)/ServerPlugin.xml" DestinationFiles="$(PluginDirectory)/plugin.xml" />
+    </Target>
 
     <Import Project="../Shared/Shared.projitems" Label="Shared" />
 </Project>
