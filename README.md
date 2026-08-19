@@ -3,14 +3,12 @@
 Provides some of the performance benefits of the newer .NET runtime without having to recompile the game.
 
 This repository ships **two** plugins:
+- [`ClientPlugin/`](ClientPlugin/) — for the Space Engineers **game client**, loaded by [Pulsar](https://github.com/SpaceGT/Pulsar).
+- [`ServerPlugin/`](ServerPlugin/) — for the Space Engineers **Dedicated Server**, loaded by [Magnetar](https://github.com/CometWorks/magnetar).
 
-- [`ClientPlugin/`](ClientPlugin/) — for the Space Engineers **game client**, loaded by
-  [Pulsar](https://github.com/SpaceGT/Pulsar).
-- [`ServerPlugin/`](ServerPlugin/README.md) — for the Space Engineers **Dedicated Server**,
-  loaded by Magnetar. UI / audio / render-only patches are skipped on the server. 
-  See [ServerPlugin/README.md](ServerPlugin/README.md) for details.
+Common patches, rewriters, and tools used by both plugin assemblies can be found in [`Shared/`](Shared/).
 
-Common patches, rewriters, and tools live in [`Shared/`](Shared/) and compile directly into both plugin assemblies.
+UI / audio / render-only patches are skipped on the server.
 
 ## Prerequisites
 
@@ -20,11 +18,11 @@ Common patches, rewriters, and tools live in [`Shared/`](Shared/) and compile di
 - [.NET 10.0 Runtime or SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
 - [Pulsar](https://github.com/SpaceGT/Pulsar)
 
-### Dedicated Server
+### Server
 
 - Space Engineers Dedicated Server
 - [.NET 10.0 Runtime or SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
-- TBD: Magnetar
+- [Magnetar](https://github.com/CometWorks/magnetar)
 
 ## How to use
 
