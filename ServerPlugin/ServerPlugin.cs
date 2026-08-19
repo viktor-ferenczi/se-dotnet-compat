@@ -1,8 +1,8 @@
 using HarmonyLib;
 using VRage.Plugins;
 
-// Magnetar does not generate the assembly version from the project file.
-#if PULSAR
+// Define assembly version when compiled by Magnetar
+#if !LOCAL_BUILD
 using System.Reflection;
 
 [assembly: AssemblyVersion("10.0.0.0")]

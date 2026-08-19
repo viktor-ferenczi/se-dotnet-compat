@@ -1,8 +1,8 @@
 ﻿using HarmonyLib;
 using VRage.Plugins;
 
-// Pulsar does not generate the assembly version from the project file.
-#if PULSAR
+// Define assembly version when compiled by Pulsar
+#if !LOCAL_BUILD
 using System.Reflection;
 
 [assembly: AssemblyVersion("10.0.5.0")]

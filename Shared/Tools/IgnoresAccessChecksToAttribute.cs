@@ -1,6 +1,6 @@
 // Source builds bypass Krafs.Publicizer and need this attribute declared here.
 
-#if PULSAR
+#if !LOCAL_BUILD
 namespace System.Runtime.CompilerServices
 {
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]

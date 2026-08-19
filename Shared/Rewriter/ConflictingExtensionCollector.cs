@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 
-#if DEDICATED
+#if MAGNETAR
 namespace ServerPlugin.Rewriter;
 #else
 namespace ClientPlugin.Rewriter;

@@ -8,13 +8,13 @@ using System.Text;
 using System.Threading;
 using VRage.Scripting;
 
-#if DEDICATED
+#if MAGNETAR
 using ServerPlugin.Rewriter;
 #else
 using ClientPlugin.Rewriter;
 #endif
 
-#if DEDICATED
+#if MAGNETAR
 namespace ServerPlugin.Rewriter
 #else
 namespace ClientPlugin.Rewriter
@@ -34,7 +34,7 @@ namespace ClientPlugin.Rewriter
     }
 }
 
-#if DEDICATED
+#if MAGNETAR
 [HarmonyPatchCategory("Finish")]
 #else
 [HarmonyPatchCategory("Init")]
@@ -48,7 +48,7 @@ static class Compile_Prefix
     }
 }
 
-#if DEDICATED
+#if MAGNETAR
 [HarmonyPatchCategory("Finish")]
 #else
 [HarmonyPatchCategory("Init")]

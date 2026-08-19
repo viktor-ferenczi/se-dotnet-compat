@@ -15,6 +15,7 @@
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 
         <RunPostBuildEvent>OnBuildSuccess</RunPostBuildEvent>
+        <DefineConstants>$(DefineConstants);PULSAR;LOCAL_BUILD</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>
