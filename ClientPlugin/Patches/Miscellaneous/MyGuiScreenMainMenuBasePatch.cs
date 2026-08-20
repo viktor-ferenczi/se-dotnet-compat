@@ -16,7 +16,7 @@ namespace ClientPlugin.Patches.Miscellaneous;
 public static class MyGuiScreenMainMenuBasePatch
 {
     [HarmonyTranspiler]
-    [HarmonyPatch("DrawAppVersion")]
+    [HarmonyPatch(nameof(MyGuiScreenMainMenuBase.DrawAppVersion))]
     private static IEnumerable<CodeInstruction> DrawAppVersionTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase patchedMethod)
     {
         var il = instructions.ToList();

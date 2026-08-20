@@ -33,21 +33,12 @@ static class StreamReadPatch
     [HarmonyTargetMethods]
     public static IEnumerable<MethodBase> TargetMethods()
     {
-        var at9WaveFormatType = typeof(MySoundStream).GetNestedType("At9WaveFormat", BindingFlags.Public | BindingFlags.NonPublic);
-        if (at9WaveFormatType == null)
-            throw new InvalidOperationException("StreamReadPatch: could not find nested type MySoundStream.At9WaveFormat (VRage.Audio). The game may have renamed or removed it.");
-
-        var readChunkMethod = AccessTools.Method(at9WaveFormatType, "ReadChunk");
+        var readChunkMethod = AccessTools.Method(typeof(MySoundStream.At9WaveFormat), nameof(MySoundStream.At9WaveFormat.ReadChunk));
         if (readChunkMethod == null)
             throw new InvalidOperationException("StreamReadPatch: could not find MySoundStream.At9WaveFormat.ReadChunk<T> (VRage.Audio).");
 
-        var fmtChunkType = at9WaveFormatType.GetNestedType("FmtChunk", BindingFlags.NonPublic);
-        if (fmtChunkType == null)
-            throw new InvalidOperationException("StreamReadPatch: could not find nested struct MySoundStream.At9WaveFormat.FmtChunk (VRage.Audio).");
-
-        var factChunkType = at9WaveFormatType.GetNestedType("FactChunk", BindingFlags.NonPublic);
-        if (factChunkType == null)
-            throw new InvalidOperationException("StreamReadPatch: could not find nested struct MySoundStream.At9WaveFormat.FactChunk (VRage.Audio).");
+        var fmtChunkType = typeof(MySoundStream.At9WaveFormat.FmtChunk);
+        var factChunkType = typeof(MySoundStream.At9WaveFormat.FactChunk);
 
         var pngDecoderCoreType = AccessTools.TypeByName("SixLabors.ImageSharp.Formats.Png.PngDecoderCore");
         if (pngDecoderCoreType == null)
@@ -69,9 +60,9 @@ static class StreamReadPatch
             ("MySoundStream.At9WaveFormat.ReadChunk<FmtChunk>", readChunkMethod.MakeGenericMethod(fmtChunkType)),
             ("MySoundStream.At9WaveFormat.ReadChunk<FactChunk>", readChunkMethod.MakeGenericMethod(factChunkType)),
 
-            ("DDSHelper.TryReadDDSHeader", AccessTools.Method(typeof(DDSHelper), "TryReadDDSHeader")),
+            ("DDSHelper.TryReadDDSHeader", AccessTools.Method(typeof(DDSHelper), nameof(DDSHelper.TryReadDDSHeader))),
 
-            ("MyModelImporter.ImportData", AccessTools.Method(typeof(MyModelImporter), "ImportData")),
+            ("MyModelImporter.ImportData", AccessTools.Method(typeof(MyModelImporter), nameof(MyModelImporter.ImportData))),
 
             ("SharpDX.Multimedia.SoundStream.ToDataStream", AccessTools.Method(typeof(SoundStream), nameof(SoundStream.ToDataStream))),
 
@@ -82,7 +73,7 @@ static class StreamReadPatch
 
             ("MyCompression.Compress", AccessTools.Method(typeof(MyCompression), nameof(MyCompression.Compress))),
             ("MyCompression.Decompress", AccessTools.Method(typeof(MyCompression), nameof(MyCompression.Decompress))),
-            ("MyCompression.DecompressFile", AccessTools.Method(typeof(MyCompression), "DecompressFile")),
+            ("MyCompression.DecompressFile", AccessTools.Method(typeof(MyCompression), nameof(MyCompression.DecompressFile))),
 
             ("MyCompressionFileLoad..ctor(string)", AccessTools.Constructor(typeof(MyCompressionFileLoad), [typeof(string)])),
             ("MyCompressionFileLoad.GetInt32", AccessTools.Method(typeof(MyCompressionFileLoad), nameof(MyCompressionFileLoad.GetInt32))),
@@ -94,7 +85,7 @@ static class StreamReadPatch
 
             ("MyStorageBase.LoadFromFile.PerformLoad (closure)", GetMyStorageBasePerformLoadMethod()),
 
-            ("MyStorageBaseCompatibility.Compatibility_LoadCellVoxelMaterial", AccessTools.Method(typeof(MyStorageBaseCompatibility), "Compatibility_LoadCellVoxelMaterial")),
+            ("MyStorageBaseCompatibility.Compatibility_LoadCellVoxelMaterial", AccessTools.Method(typeof(MyStorageBaseCompatibility), nameof(MyStorageBaseCompatibility.Compatibility_LoadCellVoxelMaterial))),
 
             ("MyShaderCache.GetCacheContent", AccessTools.Method(typeof(MyShaderCache), nameof(MyShaderCache.GetCacheContent))),
 

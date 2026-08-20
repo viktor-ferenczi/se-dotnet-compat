@@ -39,7 +39,7 @@ namespace ClientPlugin.Rewriter
 #else
 [HarmonyPatchCategory("Init")]
 #endif
-[HarmonyPatch(typeof(MyScriptCompiler), "Compile")]
+[HarmonyPatch(typeof(MyScriptCompiler), nameof(MyScriptCompiler.Compile))]
 static class Compile_Prefix
 {
     public static void Prefix(MyApiTarget target)
@@ -53,7 +53,7 @@ static class Compile_Prefix
 #else
 [HarmonyPatchCategory("Init")]
 #endif
-[HarmonyPatch(typeof(MyScriptCompiler), "CreateCompilation")]
+[HarmonyPatch(typeof(MyScriptCompiler), nameof(MyScriptCompiler.CreateCompilation))]
 static class CreateCompilation_Prefix
 {
     public static bool Prefix(

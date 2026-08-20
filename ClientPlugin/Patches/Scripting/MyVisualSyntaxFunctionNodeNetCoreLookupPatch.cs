@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using HarmonyLib;
 using VRage.Game;
@@ -21,9 +22,6 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
         @", [\w.]+, Version=\d+\.\d+\.\d+\.\d+, Culture=\w+, PublicKeyToken=(?:[a-fA-F0-9]+|null)",
         RegexOptions.Compiled);
 
-    private static FieldInfo s_methodInfoField;
-    private static MethodInfo s_initUsingMethod;
-
     // The game registers more closed generic methods while loading a session.
     private static Dictionary<string, MethodInfo> s_normalizedIndex;
     private static int s_indexedRegistrySize = -1;
@@ -31,10 +29,9 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
     [HarmonyPostfix]
     [HarmonyPriority(Priority.First)]
     static void RetryWithNormalizedSignature(MyVisualSyntaxFunctionNode __instance,
-                                             MethodInfo ___m_methodInfo,
                                              MyObjectBuilder_ScriptNode ob)
     {
-        if (___m_methodInfo != null)
+        if (__instance.m_methodInfo != null)
             return;
 
         var fn = ob as MyObjectBuilder_FunctionScriptNode;
@@ -54,14 +51,10 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
         if (found == null)
             return;
 
-        s_methodInfoField ??= AccessTools.Field(typeof(MyVisualSyntaxFunctionNode), "m_methodInfo")
-            ?? throw new InvalidOperationException(
-                "MyVisualSyntaxFunctionNode.m_methodInfo not found");
-        s_methodInfoField.SetValue(__instance, found);
+        Unsafe.AsRef(in __instance.m_methodInfo) = found;
 
         // The constructor normally calls InitUsing after a successful lookup.
-        s_initUsingMethod ??= AccessTools.Method(typeof(MyVisualSyntaxFunctionNode), "InitUsing");
-        try { s_initUsingMethod?.Invoke(__instance, null); }
+        try { __instance.InitUsing(); }
         catch { }
     }
 

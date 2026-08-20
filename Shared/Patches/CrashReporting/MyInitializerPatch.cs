@@ -14,7 +14,7 @@ namespace Shared.Patches.CrashReporting;
 public static class MyInitializerPatch
 {
     [HarmonyTranspiler]
-    [HarmonyPatch("InitExceptionHandling")]
+    [HarmonyPatch(nameof(MyInitializer.InitExceptionHandling))]
     private static IEnumerable<CodeInstruction> InitExceptionHandlingTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase patchedMethod, ILGenerator ilGenerator)
     {
         var il = instructions.ToList();

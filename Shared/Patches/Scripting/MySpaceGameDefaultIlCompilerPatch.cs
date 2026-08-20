@@ -30,7 +30,7 @@ namespace Shared.Patches.Scripting;
 public static class MySpaceGameDefaultIlCompilerPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("InitIlCompiler")]
+    [HarmonyPatch(nameof(MySpaceGameDefaultIlCompiler.InitIlCompiler))]
     private static bool InitIlCompilerPrefix(MySpaceGameDefaultIlCompiler __instance)
     {
         var list = new List<string>

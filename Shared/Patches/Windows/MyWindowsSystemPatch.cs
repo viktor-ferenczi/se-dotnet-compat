@@ -9,7 +9,7 @@ namespace Shared.Patches.Windows;
 public static class MyWindowsSystemPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("GetOsName")]
+    [HarmonyPatch(nameof(MyWindowsSystem.GetOsName))]
     private static bool GetOsNamePrefix(ref string __result)
     {
         // The native binding cannot marshal its by-value Out string on .NET 10.
@@ -18,14 +18,14 @@ public static class MyWindowsSystemPatch
     }
 
     [HarmonyPrefix]
-    [HarmonyPatch("LogEnvironmentInformation")]
+    [HarmonyPatch(nameof(MyWindowsSystem.LogEnvironmentInformation))]
     private static bool LogEnvironmentInformationPrefix()
     {
         return false;
     }
 
     [HarmonyPrefix]
-    [HarmonyPatch("GetInfoCPU")]
+    [HarmonyPatch(nameof(MyWindowsSystem.GetInfoCPU))]
     private static bool GetInfoCPUPrefix(MyWindowsSystem __instance, out uint frequency, out uint physicalCores, ref string __result)
     {
         var m_cpuInfo = __instance.m_cpuInfo;

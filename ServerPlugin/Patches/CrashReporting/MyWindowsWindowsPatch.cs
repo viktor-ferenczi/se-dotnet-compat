@@ -12,7 +12,7 @@ namespace ServerPlugin.Patches.CrashReporting;
 public static class MyWindowsWindowsPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("MessageBox", typeof(string), typeof(string), typeof(MessageBoxOptions))]
+    [HarmonyPatch(nameof(MyWindowsWindows.MessageBox), typeof(string), typeof(string), typeof(MessageBoxOptions))]
     [SuppressMessage("ReSharper", "UnusedMember.Local")]
     private static bool MessageBoxPrefix(string text, string caption, ref MessageBoxResult __result)
     {

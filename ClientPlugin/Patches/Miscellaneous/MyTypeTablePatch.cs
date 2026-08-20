@@ -17,7 +17,7 @@ namespace ClientPlugin.Patches.Miscellaneous;
 public static class MyTypeTablePatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("IsSerializableClass")]
+    [HarmonyPatch(nameof(MyTypeTable.IsSerializableClass))]
     private static bool IsSerializableClassPrefix(Type type, out bool __result)
     {
         // These types lost Serializable after .NET Framework.
@@ -30,46 +30,47 @@ public static class MyTypeTablePatch
     }
 
     [HarmonyPrefix]
-    [HarmonyPatch("Serialize")]
+    [HarmonyPatch(nameof(MyTypeTable.Serialize))]
     private static bool SerializePrefix(
-        BitStream stream,
-        List<MySynchronizedTypeInfo> ___m_idToType,
-        ref MyEventTable ___m_staticEventTable,
-        Dictionary<int, MySynchronizedTypeInfo> ___m_hashLookup)
+        MyTypeTable __instance,
+        BitStream stream)
     {
+        var idToType = __instance.m_idToType;
+        var hashLookup = __instance.m_hashLookup;
+
         if (stream.Writing)
         {
-            stream.WriteVariant((uint)___m_idToType.Count);
-            foreach (var t in ___m_idToType) stream.WriteInt32(t.TypeHash);
+            stream.WriteVariant((uint)idToType.Count);
+            foreach (var t in idToType) stream.WriteInt32(t.TypeHash);
 
             return false;
         }
 
         var num = (int)stream.ReadUInt32Variant();
-        if (___m_idToType.Count != num)
+        if (idToType.Count != num)
         {
             // Read the server list before failing so the log can show the difference.
             var serverHashes = new int[num];
             for (var i = 0; i < num; i++) serverHashes[i] = stream.ReadInt32();
-            LogTypeTableMismatch(serverHashes, ___m_idToType, ___m_hashLookup);
+            LogTypeTableMismatch(serverHashes, idToType, hashLookup);
 
-            throw new Exception($"Bad number of types from server. Received {num}, have {___m_idToType.Count}");
+            throw new Exception($"Bad number of types from server. Received {num}, have {idToType.Count}");
         }
 
-        for (var i = 0; i < num; i++) ___m_idToType[i] = null;
+        for (var i = 0; i < num; i++) idToType[i] = null;
 
         var staticEventTable = new MyEventTable(null);
-        ___m_staticEventTable = staticEventTable;
+        __instance.m_staticEventTable = staticEventTable;
         for (var j = 0; j < num; j++)
         {
             var num2 = stream.ReadInt32();
-            if (!___m_hashLookup.TryGetValue(num2, out var mySynchronizedTypeInfo)) throw new Exception("Type hash not found! Value: " + num2);
-            ___m_idToType[j] = mySynchronizedTypeInfo;
+            if (!hashLookup.TryGetValue(num2, out var mySynchronizedTypeInfo)) throw new Exception("Type hash not found! Value: " + num2);
+            idToType[j] = mySynchronizedTypeInfo;
             staticEventTable.AddStaticEvents(mySynchronizedTypeInfo.Type);
         }
 
         for (var i = 0; i < num; i++)
-            if (___m_idToType[i] == null)
+            if (idToType[i] == null)
                 throw new Exception($"Type ID {i} is missing after the reordering based on server response");
 
         return false;

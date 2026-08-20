@@ -27,20 +27,18 @@ static class StreamReadPatch
     [HarmonyTargetMethods]
     public static IEnumerable<MethodBase> TargetMethods()
     {
-        var at9WaveFormatType = typeof(MySoundStream).GetNestedType("At9WaveFormat", BindingFlags.Public | BindingFlags.NonPublic)!;
-        var readChunkMethod = AccessTools.Method(at9WaveFormatType, "ReadChunk");
-
-        var fmtChunkType = at9WaveFormatType.GetNestedType("FmtChunk", BindingFlags.NonPublic)!;
-        var factChunkType = at9WaveFormatType.GetNestedType("FactChunk", BindingFlags.NonPublic)!;
+        var readChunkMethod = AccessTools.Method(typeof(MySoundStream.At9WaveFormat), nameof(MySoundStream.At9WaveFormat.ReadChunk));
+        var fmtChunkType = typeof(MySoundStream.At9WaveFormat.FmtChunk);
+        var factChunkType = typeof(MySoundStream.At9WaveFormat.FactChunk);
 
         var methods = new List<MethodBase>
         {
             readChunkMethod.MakeGenericMethod(fmtChunkType),
             readChunkMethod.MakeGenericMethod(factChunkType),
 
-            AccessTools.Method(typeof(DDSHelper), "TryReadDDSHeader"),
+            AccessTools.Method(typeof(DDSHelper), nameof(DDSHelper.TryReadDDSHeader)),
 
-            AccessTools.Method(typeof(MyModelImporter), "ImportData"),
+            AccessTools.Method(typeof(MyModelImporter), nameof(MyModelImporter.ImportData)),
 
             AccessTools.Method(typeof(SoundStream), nameof(SoundStream.ToDataStream)),
 
@@ -51,7 +49,7 @@ static class StreamReadPatch
 
             AccessTools.Method(typeof(MyCompression), nameof(MyCompression.Compress)),
             AccessTools.Method(typeof(MyCompression), nameof(MyCompression.Decompress)),
-            AccessTools.Method(typeof(MyCompression), "DecompressFile"),
+            AccessTools.Method(typeof(MyCompression), nameof(MyCompression.DecompressFile)),
 
             AccessTools.Constructor(typeof(MyCompressionFileLoad), [typeof(string)]),
             AccessTools.Method(typeof(MyCompressionFileLoad), nameof(MyCompressionFileLoad.GetInt32)),
@@ -62,7 +60,7 @@ static class StreamReadPatch
 
             GetMyStorageBasePerformLoadMethod(),
 
-            AccessTools.Method(typeof(MyStorageBaseCompatibility), "Compatibility_LoadCellVoxelMaterial"),
+            AccessTools.Method(typeof(MyStorageBaseCompatibility), nameof(MyStorageBaseCompatibility.Compatibility_LoadCellVoxelMaterial)),
 
             AccessTools.Method(typeof(MyShaderCache), nameof(MyShaderCache.GetCacheContent)),
         };

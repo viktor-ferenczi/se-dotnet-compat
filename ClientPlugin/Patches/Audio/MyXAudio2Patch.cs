@@ -13,7 +13,7 @@ namespace ClientPlugin.Patches.Audio;
 public static class MyXAudio2Patch
 {
     [HarmonyTranspiler]
-    [HarmonyPatch("CreateX3DAudio")]
+    [HarmonyPatch(nameof(MyXAudio2.CreateX3DAudio))]
     private static IEnumerable<CodeInstruction> CreateX3DAudioTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase patchedMethod)
     {
         var il = instructions.ToList();

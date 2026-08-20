@@ -212,6 +212,7 @@
         <Publicize Include="VRage.Audio"/>
         <Publicize Include="VRage.Dedicated"/>
         <Publicize Include="VRage.EOS"/>
+        <Publicize Include="VRage.Library"/>
         <Publicize Include="VRage.Network"/>
         <Publicize Include="VRage.Platform.Windows"/>
         <Publicize Include="VRage.Render11"/>

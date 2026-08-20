@@ -17,7 +17,7 @@ namespace ServerPlugin.Patches.Miscellaneous;
 public static class MyTypeTablePatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("IsSerializableClass")]
+    [HarmonyPatch(nameof(MyTypeTable.IsSerializableClass))]
     private static bool IsSerializableClassPrefix(Type type, out bool __result)
     {
         __result = type.FullName is "System.Delegate" or "System.MulticastDelegate"
@@ -36,20 +36,21 @@ public static class MyReplicationLayerBasePatch
 {
     [HarmonyPostfix]
     [HarmonyPatch(nameof(MyReplicationLayerBase.RegisterFromAssembly), typeof(IEnumerable<Assembly>))]
-    private static void RegisterFromAssemblyPostfix(MyTypeTable ___m_typeTable)
+    private static void RegisterFromAssemblyPostfix(MyReplicationLayerBase __instance)
     {
-        if (___m_typeTable == null)
+        var typeTable = __instance.m_typeTable;
+        if (typeTable == null)
             return;
 
-        if (___m_typeTable.Contains(typeof(Delegate)) && ___m_typeTable.Contains(typeof(MulticastDelegate)))
+        if (typeTable.Contains(typeof(Delegate)) && typeTable.Contains(typeof(MulticastDelegate)))
             return;
 
         try
         {
-            ___m_typeTable.Register(typeof(Delegate));
-            ___m_typeTable.Register(typeof(MulticastDelegate));
+            typeTable.Register(typeof(Delegate));
+            typeTable.Register(typeof(MulticastDelegate));
 
-            var ok = ___m_typeTable.Contains(typeof(Delegate)) && ___m_typeTable.Contains(typeof(MulticastDelegate));
+            var ok = typeTable.Contains(typeof(Delegate)) && typeTable.Contains(typeof(MulticastDelegate));
             MyLog.Default.Log(ok ? MyLogSeverity.Info : MyLogSeverity.Error,
                 "[DotNetCompat] Explicitly registered Delegate/MulticastDelegate after scan: present={0}. " +
                 "If false, the IsSerializableClass prefix is not active (check it is in the \"Finish\" category).",
