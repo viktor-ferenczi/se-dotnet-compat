@@ -14,7 +14,10 @@ public static class MyXAudio2Patch
 {
     [HarmonyTranspiler]
     [HarmonyPatch(nameof(MyXAudio2.CreateX3DAudio))]
-    private static IEnumerable<CodeInstruction> CreateX3DAudioTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase patchedMethod)
+    private static IEnumerable<CodeInstruction> CreateX3DAudioTranspiler(
+        IEnumerable<CodeInstruction> instructions,
+        MethodBase patchedMethod
+    )
     {
         var il = instructions.ToList();
         il.RecordOriginalCode(patchedMethod);
@@ -23,7 +26,9 @@ public static class MyXAudio2Patch
         // Use X3DAudioVersion.Default instead of Version29.
         var index = il.FindIndex(ci => ci.opcode == OpCodes.Ldc_I4_3);
         if (index == -1)
-            throw new CodeInstructionNotFound("Failed to find ldc.i4.3 (X3DAudioVersion.Version29) in the IL code of method CreateX3DAudio");
+            throw new CodeInstructionNotFound(
+                "Failed to find ldc.i4.3 (X3DAudioVersion.Version29) in the IL code of method CreateX3DAudio"
+            );
 
         il[index] = new CodeInstruction(OpCodes.Ldc_I4_0);
 

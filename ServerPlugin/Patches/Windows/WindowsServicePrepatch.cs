@@ -117,14 +117,17 @@ public static class WindowsServicePrepatch
                     MethodReference mr => mr.DeclaringType?.FullName,
                     FieldReference fr => fr.DeclaringType?.FullName ?? fr.FieldType?.FullName,
                     TypeReference tr => tr.FullName,
-                    _ => null
+                    _ => null,
                 };
 
                 if (typeName != null && typeName.Contains("ServiceController"))
                     return true;
             }
 
-            if (instr.Operand is TypeReference typeRef && typeRef.FullName.Contains("ServiceController"))
+            if (
+                instr.Operand is TypeReference typeRef
+                && typeRef.FullName.Contains("ServiceController")
+            )
                 return true;
         }
 

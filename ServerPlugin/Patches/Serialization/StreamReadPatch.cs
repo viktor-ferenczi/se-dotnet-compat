@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using Sandbox.Engine.Voxels;
+using Shared.Tools;
 using SharpDX.Multimedia;
 using SharpDX.Toolkit.Graphics;
 using VRage;
@@ -13,7 +14,6 @@ using VRage.Audio;
 using VRage.Library.Compression;
 using VRage.Render11.Shader;
 using VRageRender.Import;
-using Shared.Tools;
 
 namespace ServerPlugin.Patches.Serialization;
 
@@ -21,13 +21,23 @@ namespace ServerPlugin.Patches.Serialization;
 [HarmonyPatchCategory("Finish")]
 static class StreamReadPatch
 {
-    private static readonly MethodInfo OriginalReadMethod = AccessTools.Method(typeof(Stream), nameof(Stream.Read), [typeof(byte[]), typeof(int), typeof(int)]);
-    private static readonly MethodInfo ReplacementReadMethod = AccessTools.Method(typeof(StreamReadPatch), nameof(ReplacementRead));
+    private static readonly MethodInfo OriginalReadMethod = AccessTools.Method(
+        typeof(Stream),
+        nameof(Stream.Read),
+        [typeof(byte[]), typeof(int), typeof(int)]
+    );
+    private static readonly MethodInfo ReplacementReadMethod = AccessTools.Method(
+        typeof(StreamReadPatch),
+        nameof(ReplacementRead)
+    );
 
     [HarmonyTargetMethods]
     public static IEnumerable<MethodBase> TargetMethods()
     {
-        var readChunkMethod = AccessTools.Method(typeof(MySoundStream.At9WaveFormat), nameof(MySoundStream.At9WaveFormat.ReadChunk));
+        var readChunkMethod = AccessTools.Method(
+            typeof(MySoundStream.At9WaveFormat),
+            nameof(MySoundStream.At9WaveFormat.ReadChunk)
+        );
         var fmtChunkType = typeof(MySoundStream.At9WaveFormat.FmtChunk);
         var factChunkType = typeof(MySoundStream.At9WaveFormat.FactChunk);
 
@@ -35,33 +45,35 @@ static class StreamReadPatch
         {
             readChunkMethod.MakeGenericMethod(fmtChunkType),
             readChunkMethod.MakeGenericMethod(factChunkType),
-
             AccessTools.Method(typeof(DDSHelper), nameof(DDSHelper.TryReadDDSHeader)),
-
             AccessTools.Method(typeof(MyModelImporter), nameof(MyModelImporter.ImportData)),
-
             AccessTools.Method(typeof(SoundStream), nameof(SoundStream.ToDataStream)),
-
             AccessTools.Method(typeof(StreamExtensions), nameof(StreamExtensions.CheckGZipHeader)),
             AccessTools.Method(typeof(StreamExtensions), nameof(StreamExtensions.ReadNoAlloc)),
             AccessTools.Method(typeof(StreamExtensions), nameof(StreamExtensions.ReadString)),
             AccessTools.Method(typeof(StreamExtensions), nameof(StreamExtensions.SkipBytes)),
-
             AccessTools.Method(typeof(MyCompression), nameof(MyCompression.Compress)),
             AccessTools.Method(typeof(MyCompression), nameof(MyCompression.Decompress)),
             AccessTools.Method(typeof(MyCompression), nameof(MyCompression.DecompressFile)),
-
             AccessTools.Constructor(typeof(MyCompressionFileLoad), [typeof(string)]),
-            AccessTools.Method(typeof(MyCompressionFileLoad), nameof(MyCompressionFileLoad.GetInt32)),
-            AccessTools.Method(typeof(MyCompressionFileLoad), nameof(MyCompressionFileLoad.GetCompressedBuffer)),
-
+            AccessTools.Method(
+                typeof(MyCompressionFileLoad),
+                nameof(MyCompressionFileLoad.GetInt32)
+            ),
+            AccessTools.Method(
+                typeof(MyCompressionFileLoad),
+                nameof(MyCompressionFileLoad.GetCompressedBuffer)
+            ),
             AccessTools.Constructor(typeof(MyCompressionStreamLoad), [typeof(byte[])]),
-            AccessTools.Method(typeof(MyCompressionStreamLoad), nameof(MyCompressionStreamLoad.GetInt32)),
-
+            AccessTools.Method(
+                typeof(MyCompressionStreamLoad),
+                nameof(MyCompressionStreamLoad.GetInt32)
+            ),
             GetMyStorageBasePerformLoadMethod(),
-
-            AccessTools.Method(typeof(MyStorageBaseCompatibility), nameof(MyStorageBaseCompatibility.Compatibility_LoadCellVoxelMaterial)),
-
+            AccessTools.Method(
+                typeof(MyStorageBaseCompatibility),
+                nameof(MyStorageBaseCompatibility.Compatibility_LoadCellVoxelMaterial)
+            ),
             AccessTools.Method(typeof(MyShaderCache), nameof(MyShaderCache.GetCacheContent)),
         };
 
@@ -77,13 +89,21 @@ static class StreamReadPatch
     {
         var closureType = typeof(MyStorageBase)
             .GetNestedTypes(BindingFlags.NonPublic)
-            .FirstOrDefault(t => t.Name.StartsWith("<>c__DisplayClass") &&
-                                 t.GetMethod("<LoadFromFile>g__PerformLoad|0", BindingFlags.Instance | BindingFlags.NonPublic) != null);
+            .FirstOrDefault(t =>
+                t.Name.StartsWith("<>c__DisplayClass")
+                && t.GetMethod(
+                    "<LoadFromFile>g__PerformLoad|0",
+                    BindingFlags.Instance | BindingFlags.NonPublic
+                ) != null
+            );
 
         if (closureType == null)
             throw new Exception("Could not find MyStorageBase.LoadFromFile closure class");
 
-        var method = closureType.GetMethod("<LoadFromFile>g__PerformLoad|0", BindingFlags.Instance | BindingFlags.NonPublic);
+        var method = closureType.GetMethod(
+            "<LoadFromFile>g__PerformLoad|0",
+            BindingFlags.Instance | BindingFlags.NonPublic
+        );
         if (method == null)
             throw new Exception($"Could not find PerformLoad method in {closureType.FullName}");
 
@@ -91,9 +111,14 @@ static class StreamReadPatch
     }
 
     [HarmonyTranspiler]
-    public static IEnumerable<CodeInstruction> StreamReadTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase patchedMethod)
+    public static IEnumerable<CodeInstruction> StreamReadTranspiler(
+        IEnumerable<CodeInstruction> instructions,
+        MethodBase patchedMethod
+    )
     {
-        Console.WriteLine($"StreamReadPatch.StreamReadTranspiler: {patchedMethod.FullDescription()}");
+        Console.WriteLine(
+            $"StreamReadPatch.StreamReadTranspiler: {patchedMethod.FullDescription()}"
+        );
 
         var codeInstructions = instructions as CodeInstruction[] ?? instructions.ToArray();
         var il = codeInstructions.ToList();
@@ -110,9 +135,13 @@ static class StreamReadPatch
         }
 
         if (count == 0)
-            throw new Exception($"Could not find read calls in method: {patchedMethod.FullDescription()}");
+            throw new Exception(
+                $"Could not find read calls in method: {patchedMethod.FullDescription()}"
+            );
 
-        Console.WriteLine($"Patched {count} Stream.Read calls in method: {patchedMethod.FullDescription()}");
+        Console.WriteLine(
+            $"Patched {count} Stream.Read calls in method: {patchedMethod.FullDescription()}"
+        );
 
         il.RecordPatchedCode(patchedMethod);
         return il;

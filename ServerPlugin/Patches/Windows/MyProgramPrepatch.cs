@@ -32,20 +32,24 @@ public static class MyProgramPrepatch
         {
             var instr = instructions[i];
 
-            if (start < 0 &&
-                (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) &&
-                instr.Operand is MethodReference mr &&
-                mr.Name == "get_SpaceEngineersDSLogo")
+            if (
+                start < 0
+                && (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt)
+                && instr.Operand is MethodReference mr
+                && mr.Name == "get_SpaceEngineersDSLogo"
+            )
             {
                 start = i;
                 continue;
             }
 
-            if (start >= 0 &&
-                instr.OpCode == OpCodes.Stsfld &&
-                instr.Operand is FieldReference fr &&
-                fr.Name == "OnReset" &&
-                fr.DeclaringType?.FullName == "VRage.Dedicated.ConfigForm")
+            if (
+                start >= 0
+                && instr.OpCode == OpCodes.Stsfld
+                && instr.Operand is FieldReference fr
+                && fr.Name == "OnReset"
+                && fr.DeclaringType?.FullName == "VRage.Dedicated.ConfigForm"
+            )
             {
                 end = i;
                 break;

@@ -28,11 +28,17 @@ public static class MyGridShapePatch
             var shapeInfo = m_blockCollector.ShapeInfos[i];
             HkShape[] obj = null;
             Span<HkShape> span;
-            span = shapeInfo.Count >= 256 ? (Span<HkShape>)(obj = new HkShape[shapeInfo.Count]) : shapes.AsSpan(0, shapeInfo.Count);
-            for (var j = 0; j < shapeInfo.Count; j++) span[j] = m_blockCollector.Shapes[num + j];
+            span =
+                shapeInfo.Count >= 256
+                    ? (Span<HkShape>)(obj = new HkShape[shapeInfo.Count])
+                    : shapes.AsSpan(0, shapeInfo.Count);
+            for (var j = 0; j < shapeInfo.Count; j++)
+                span[j] = m_blockCollector.Shapes[num + j];
             num += shapeInfo.Count;
-            if (m_root.ShapeCount + shapeInfo.Count > 64879) MyHud.Notifications.Add(MyNotificationSingletons.GridReachedPhysicalLimit);
-            if (m_root.ShapeCount + shapeInfo.Count < 65536) m_root.AddShapes(span, new Vector3S(shapeInfo.Min), new Vector3S(shapeInfo.Max));
+            if (m_root.ShapeCount + shapeInfo.Count > 64879)
+                MyHud.Notifications.Add(MyNotificationSingletons.GridReachedPhysicalLimit);
+            if (m_root.ShapeCount + shapeInfo.Count < 65536)
+                m_root.AddShapes(span, new Vector3S(shapeInfo.Min), new Vector3S(shapeInfo.Max));
             GC.KeepAlive(obj);
         }
 

@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
-using VRage.Platform.Windows;
 using VRage;
+using VRage.Platform.Windows;
 
 namespace Shared.Patches.CrashReporting;
 
@@ -19,7 +19,13 @@ public static class MyCrashReportingPatch
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyCrashReporting.ExtractCrashAnalyticsReport))]
-    private static bool ExtractCrashAnalyticsReportPrefix(out bool exitAfterReport, out string logPath, out CrashInfo info, out bool isUnsupportedGpu, ref bool __result)
+    private static bool ExtractCrashAnalyticsReportPrefix(
+        out bool exitAfterReport,
+        out string logPath,
+        out CrashInfo info,
+        out bool isUnsupportedGpu,
+        ref bool __result
+    )
     {
         logPath = null;
         info = default;

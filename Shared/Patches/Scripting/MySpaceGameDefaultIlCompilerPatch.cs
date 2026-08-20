@@ -48,7 +48,7 @@ public static class MySpaceGameDefaultIlCompilerPatch
             Path.Combine(MyFileSystem.ExePath, "VRage.Scripting.dll"),
             Path.Combine(MyFileSystem.ExePath, "SpaceEngineers.ObjectBuilders.dll"),
             Path.Combine(MyFileSystem.ExePath, "SpaceEngineers.Game.dll"),
-            Path.Combine(MyFileSystem.ExePath, "ProtoBuf.Net.Core.dll")
+            Path.Combine(MyFileSystem.ExePath, "ProtoBuf.Net.Core.dll"),
         };
 
         var assemblyLocations = list;
@@ -56,40 +56,49 @@ public static class MySpaceGameDefaultIlCompilerPatch
         foreach (var assembly in assemblies)
         {
             var name = assembly.GetName().Name;
-            if (name.StartsWith("System.")) assemblyLocations.Add(assembly.Location);
+            if (name.StartsWith("System."))
+                assemblyLocations.Add(assembly.Location);
         }
 
-        MyVRage.Platform.Scripting.Initialize(MySandboxGame.Static.UpdateThread, assemblyLocations, [
-            typeof(MyTuple),
-            typeof(Vector2),
-            typeof(Game),
-            typeof(ITerminalAction),
-            typeof(IMyGridTerminalSystem),
-            typeof(MyModelComponent),
-            typeof(IMyComponentAggregate),
-            typeof(ListReader<>),
-            typeof(MyObjectBuilder_FactionDefinition),
-            typeof(IMyCubeBlock),
-            typeof(MyIni),
-            typeof(ImmutableArray),
-            typeof(IMyAirVent),
-            typeof(MySprite),
-            typeof(VRage.Scripting.MemorySafeTypes.MemorySafeArrayList),
-
-            __instance.GetType(),
-            typeof(int),
-            typeof(XmlEntity),
-            typeof(HashSet<>),
-            typeof(Dictionary<,>),
-            typeof(Uri)
-        ], [
-            MySpaceGameDefaultIlCompiler.GetPrefixedBranchName(),
-            "STABLE",
-            string.Empty,
-            string.Empty,
-            "VERSION_" + ((Version)MyFinalBuildConstants.APP_VERSION).Minor,
-            "BUILD_" + ((Version)MyFinalBuildConstants.APP_VERSION).Build
-        ], MyFakes.ENABLE_ROSLYN_SCRIPT_DIAGNOSTICS ? Path.Combine(MyFileSystem.UserDataPath, "ScriptDiagnostics") : null, MyFakes.ENABLE_SCRIPTS_PDB);
+        MyVRage.Platform.Scripting.Initialize(
+            MySandboxGame.Static.UpdateThread,
+            assemblyLocations,
+            [
+                typeof(MyTuple),
+                typeof(Vector2),
+                typeof(Game),
+                typeof(ITerminalAction),
+                typeof(IMyGridTerminalSystem),
+                typeof(MyModelComponent),
+                typeof(IMyComponentAggregate),
+                typeof(ListReader<>),
+                typeof(MyObjectBuilder_FactionDefinition),
+                typeof(IMyCubeBlock),
+                typeof(MyIni),
+                typeof(ImmutableArray),
+                typeof(IMyAirVent),
+                typeof(MySprite),
+                typeof(VRage.Scripting.MemorySafeTypes.MemorySafeArrayList),
+                __instance.GetType(),
+                typeof(int),
+                typeof(XmlEntity),
+                typeof(HashSet<>),
+                typeof(Dictionary<,>),
+                typeof(Uri),
+            ],
+            [
+                MySpaceGameDefaultIlCompiler.GetPrefixedBranchName(),
+                "STABLE",
+                string.Empty,
+                string.Empty,
+                "VERSION_" + ((Version)MyFinalBuildConstants.APP_VERSION).Minor,
+                "BUILD_" + ((Version)MyFinalBuildConstants.APP_VERSION).Build,
+            ],
+            MyFakes.ENABLE_ROSLYN_SCRIPT_DIAGNOSTICS
+                ? Path.Combine(MyFileSystem.UserDataPath, "ScriptDiagnostics")
+                : null,
+            MyFakes.ENABLE_SCRIPTS_PDB
+        );
 
         return false;
     }

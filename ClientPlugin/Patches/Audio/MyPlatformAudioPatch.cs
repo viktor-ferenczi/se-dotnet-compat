@@ -14,7 +14,10 @@ public static class MyPlatformAudioPatch
 {
     [HarmonyTranspiler]
     [HarmonyPatch(nameof(MyPlatformAudio.InitAudioEngine))]
-    private static IEnumerable<CodeInstruction> InitAudioEngineTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase patchedMethod)
+    private static IEnumerable<CodeInstruction> InitAudioEngineTranspiler(
+        IEnumerable<CodeInstruction> instructions,
+        MethodBase patchedMethod
+    )
     {
         var il = instructions.ToList();
         il.RecordOriginalCode(patchedMethod);
@@ -23,7 +26,9 @@ public static class MyPlatformAudioPatch
         // Use XAudio2Version.Default instead of Version29.
         var index = il.FindIndex(ci => ci.opcode == OpCodes.Ldc_I4_3);
         if (index == -1)
-            throw new CodeInstructionNotFound("Failed to find ldc.i4.3 in the IL code of method InitAudioEngine");
+            throw new CodeInstructionNotFound(
+                "Failed to find ldc.i4.3 in the IL code of method InitAudioEngine"
+            );
 
         il[index] = new CodeInstruction(OpCodes.Ldc_I4_0);
 

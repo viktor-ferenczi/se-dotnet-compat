@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Reflection;
 using System.Collections.Generic;
+using System.Reflection;
 using HarmonyLib;
 using Mono.Cecil;
 using Shared.Patches.ImageProcessing;
@@ -32,10 +32,11 @@ public static class Preloader
         if (!Resolving.Add(targetName))
         {
             Console.Error.WriteLine(
-                $"[DotNetCompat] AssemblyResolve recursion for '{targetName}'. " +
-                "The runtime cannot locate this assembly by name; Pulsar must " +
-                "stage it in a probe path (e.g. plugin Bin folder). Returning null " +
-                "to abort the resolve chain.");
+                $"[DotNetCompat] AssemblyResolve recursion for '{targetName}'. "
+                    + "The runtime cannot locate this assembly by name; Pulsar must "
+                    + "stage it in a probe path (e.g. plugin Bin folder). Returning null "
+                    + "to abort the resolve chain."
+            );
             return null;
         }
         try
@@ -45,7 +46,8 @@ public static class Preloader
         catch (Exception ex)
         {
             Console.Error.WriteLine(
-                $"[DotNetCompat] Failed to load '{targetName}': {ex.GetType().Name}: {ex.Message}");
+                $"[DotNetCompat] Failed to load '{targetName}': {ex.GetType().Name}: {ex.Message}"
+            );
             return null;
         }
         finally
@@ -73,15 +75,16 @@ public static class Preloader
         "VRage.Render.dll",
         "VRage.Render11.dll",
         "VRage.Scripting.dll",
-
         // Dependency DLLs
         "SharpDX.dll",
         "SharpDX.DXGI.dll",
         "SharpDX.XAudio2.dll",
-        "SixLabors.ImageSharp.dll"
+        "SixLabors.ImageSharp.dll",
     ];
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    [System.Runtime.CompilerServices.MethodImpl(
+        System.Runtime.CompilerServices.MethodImplOptions.NoInlining
+    )]
     public static void Patch(AssemblyDefinition asmDef)
     {
         AppContext.SetSwitch("System.Reflection.AssemblyLoadContext.EnableDiagnostics", true);
@@ -91,24 +94,28 @@ public static class Preloader
         XmlSerializationPrepatch.Prepatch(asmDef);
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    [System.Runtime.CompilerServices.MethodImpl(
+        System.Runtime.CompilerServices.MethodImplOptions.NoInlining
+    )]
     public static void Finish()
     {
         // See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
-        AppContext.SetSwitch("System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization", true);
+        AppContext.SetSwitch(
+            "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization",
+            true
+        );
 
         // Load this before the game can bind to Keen's copy.
         Assembly.Load("System.Collections.Immutable");
 
         // JIT these stubs on the main thread before Harmony starts worker threads.
         PrewarmDirectoryEnumerationStubs();
-        
+
         AppDomain.CurrentDomain.AssemblyResolve += ResolveOverriddenAssembly;
-        
+
 #if DEBUG && HARMONY_DEBUG
         Harmony.DEBUG = true;
 #endif
-        
         var harmony = new Harmony("DotNetCompat");
         harmony.PatchCategory("Finish");
     }
@@ -126,12 +133,16 @@ public static class Preloader
             using (var e = System.IO.Directory.EnumerateDirectories(baseDir).GetEnumerator())
                 e.MoveNext();
 
-            Console.WriteLine("[DotNetCompat] Pre-warmed Directory.Enumerate* JIT stubs on main thread");
+            Console.WriteLine(
+                "[DotNetCompat] Pre-warmed Directory.Enumerate* JIT stubs on main thread"
+            );
         }
         catch (Exception ex)
         {
             // Failure is harmless, but leaves the JIT race unfixed.
-            Console.WriteLine($"[DotNetCompat] Pre-warm of Directory.Enumerate* failed: {ex.GetType().Name}: {ex.Message}");
+            Console.WriteLine(
+                $"[DotNetCompat] Pre-warm of Directory.Enumerate* failed: {ex.GetType().Name}: {ex.Message}"
+            );
         }
     }
 }

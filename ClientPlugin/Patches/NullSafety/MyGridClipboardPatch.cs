@@ -20,11 +20,14 @@ public static class MyGridClipboardPatch
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyGridClipboard.AddSingleBlockRequirements))]
-    private static bool AddSingleBlockRequirementsPrefix(MyObjectBuilder_CubeBlock block, MyComponentList buildComponents)
+    private static bool AddSingleBlockRequirementsPrefix(
+        MyObjectBuilder_CubeBlock block,
+        MyComponentList buildComponents
+    )
     {
-        if (block?.ConstructionStockpile?.Items != null) 
+        if (block?.ConstructionStockpile?.Items != null)
             return true;
-        
+
         if (block != null && buildComponents != null)
         {
             MyComponentStack.GetMountedComponents(buildComponents, block);

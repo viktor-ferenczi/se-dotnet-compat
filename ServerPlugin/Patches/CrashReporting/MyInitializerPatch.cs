@@ -37,7 +37,9 @@ public static class MyInitializerServerPatch
                 Console.Error.WriteLine("FATAL: Out of memory");
 
             if (exception != null)
-                Console.Error.WriteLine($"FATAL: Unhandled exception:{Environment.NewLine}{exception}");
+                Console.Error.WriteLine(
+                    $"FATAL: Unhandled exception:{Environment.NewLine}{exception}"
+                );
             else
                 Console.Error.WriteLine("FATAL: Native crash");
 
@@ -46,9 +48,7 @@ public static class MyInitializerServerPatch
 
             Console.Error.Flush();
         }
-        catch
-        {
-        }
+        catch { }
 
         Environment.Exit(1);
         return false;

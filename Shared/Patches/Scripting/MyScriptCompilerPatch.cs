@@ -16,13 +16,16 @@ public static class MyScriptCompilerPatch
     [HarmonyPatch(nameof(MyScriptCompiler.AddReferencedAssemblies))]
     public static bool AddReferencedAssembliesPrefix(
         MyScriptCompiler __instance,
-        string[] assemblyLocations)
+        string[] assemblyLocations
+    )
     {
         foreach (var assemblyLocation in assemblyLocations)
         {
             if (string.IsNullOrEmpty(assemblyLocation))
             {
-                Console.WriteLine($"DotNetCompat [WARNING] AddReferencedAssembliesPrefix: Empty assembly location {assemblyLocation}");
+                Console.WriteLine(
+                    $"DotNetCompat [WARNING] AddReferencedAssembliesPrefix: Empty assembly location {assemblyLocation}"
+                );
 #if DEBUG
                 Debugger.Break();
 #endif
@@ -30,7 +33,9 @@ public static class MyScriptCompilerPatch
             }
 
             if (__instance.m_assemblyLocations.Add(assemblyLocation))
-                __instance.m_metadataReferences.Add(MetadataReference.CreateFromFile(assemblyLocation));
+                __instance.m_metadataReferences.Add(
+                    MetadataReference.CreateFromFile(assemblyLocation)
+                );
         }
 
         return false;
@@ -38,7 +43,10 @@ public static class MyScriptCompilerPatch
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyScriptCompiler.AddImplicitInGameNamespacesFromTypes))]
-    public static bool AddImplicitInGameNamespacesFromTypesPrefix(MyScriptCompiler __instance, Type[] types)
+    public static bool AddImplicitInGameNamespacesFromTypesPrefix(
+        MyScriptCompiler __instance,
+        Type[] types
+    )
     {
         foreach (var type in types)
         {
@@ -47,7 +55,9 @@ public static class MyScriptCompilerPatch
 
             if (string.IsNullOrEmpty(type.Namespace))
             {
-                Console.WriteLine($"DotNetCompat [WARNING] AddImplicitInGameNamespacesFromTypesPrefix: Empty namespace name {type.Namespace}");
+                Console.WriteLine(
+                    $"DotNetCompat [WARNING] AddImplicitInGameNamespacesFromTypesPrefix: Empty namespace name {type.Namespace}"
+                );
 #if DEBUG
                 Debugger.Break();
 #endif

@@ -19,8 +19,10 @@ static class MyDependencyCollectorTpaPatch
             var tpa = AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") as string;
             if (string.IsNullOrEmpty(tpa))
             {
-                MyLog.Default.Log(MyLogSeverity.Warning,
-                    "[LinuxCompat VS-DEPS] TRUSTED_PLATFORM_ASSEMBLIES empty; visual-script compile may fail.");
+                MyLog.Default.Log(
+                    MyLogSeverity.Warning,
+                    "[LinuxCompat VS-DEPS] TRUSTED_PLATFORM_ASSEMBLIES empty; visual-script compile may fail."
+                );
                 return;
             }
 
@@ -31,7 +33,10 @@ static class MyDependencyCollectorTpaPatch
             int skipped = 0;
             foreach (string path in tpa.Split(Path.PathSeparator))
             {
-                if (string.IsNullOrEmpty(path) || !path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                if (
+                    string.IsNullOrEmpty(path)
+                    || !path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                )
                     continue;
                 try
                 {
@@ -43,14 +48,20 @@ static class MyDependencyCollectorTpaPatch
                     skipped++;
                 }
             }
-            MyLog.Default.Log(MyLogSeverity.Info,
+            MyLog.Default.Log(
+                MyLogSeverity.Info,
                 "[LinuxCompat VS-DEPS] Added {0} TPA reference(s) to MyDependencyCollector ({1} skipped).",
-                added, skipped);
+                added,
+                skipped
+            );
         }
         catch (Exception ex)
         {
-            MyLog.Default.Log(MyLogSeverity.Warning,
-                "[LinuxCompat VS-DEPS] TPA-extension postfix threw: {0}", ex.GetType().Name + ": " + ex.Message);
+            MyLog.Default.Log(
+                MyLogSeverity.Warning,
+                "[LinuxCompat VS-DEPS] TPA-extension postfix threw: {0}",
+                ex.GetType().Name + ": " + ex.Message
+            );
         }
     }
 }

@@ -1,9 +1,9 @@
 using System;
-using System.Reflection;
 using System.Collections.Generic;
-using ServerPlugin.Patches.Windows;
+using System.Reflection;
 using HarmonyLib;
 using Mono.Cecil;
+using ServerPlugin.Patches.Windows;
 using Shared.Patches.ImageProcessing;
 using Shared.Patches.NullSafety;
 using Shared.Patches.Serialization;
@@ -35,10 +35,11 @@ public static class Preloader
         if (!Resolving.Add(targetName))
         {
             Console.Error.WriteLine(
-                $"[DotNetCompat] AssemblyResolve recursion for '{targetName}'. " +
-                "The runtime cannot locate this assembly by name; Magnetar must " +
-                "stage it in a probe path (e.g. plugin Bin folder). Returning null " +
-                "to abort the resolve chain.");
+                $"[DotNetCompat] AssemblyResolve recursion for '{targetName}'. "
+                    + "The runtime cannot locate this assembly by name; Magnetar must "
+                    + "stage it in a probe path (e.g. plugin Bin folder). Returning null "
+                    + "to abort the resolve chain."
+            );
             return null;
         }
         try
@@ -48,7 +49,8 @@ public static class Preloader
         catch (Exception ex)
         {
             Console.Error.WriteLine(
-                $"[DotNetCompat] Failed to load '{targetName}': {ex.GetType().Name}: {ex.Message}");
+                $"[DotNetCompat] Failed to load '{targetName}': {ex.GetType().Name}: {ex.Message}"
+            );
             return null;
         }
         finally
@@ -73,16 +75,16 @@ public static class Preloader
         "VRage.Platform.Windows.dll",
         "VRage.Render11.dll",
         "VRage.Scripting.dll",
-
         // Server DLLs
         "VRage.Dedicated.dll",
         "SpaceEngineersDedicated.exe",
-
         // Dependency DLLs
         "SixLabors.ImageSharp.dll",
     ];
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    [System.Runtime.CompilerServices.MethodImpl(
+        System.Runtime.CompilerServices.MethodImplOptions.NoInlining
+    )]
     public static void Patch(AssemblyDefinition asmDef)
     {
         AppContext.SetSwitch("System.Reflection.AssemblyLoadContext.EnableDiagnostics", true);
@@ -94,11 +96,16 @@ public static class Preloader
         MyProgramPrepatch.Prepatch(asmDef);
     }
 
-    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    [System.Runtime.CompilerServices.MethodImpl(
+        System.Runtime.CompilerServices.MethodImplOptions.NoInlining
+    )]
     public static void Finish()
     {
         // See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
-        AppContext.SetSwitch("System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization", true);
+        AppContext.SetSwitch(
+            "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization",
+            true
+        );
 
         // Load this before the game can bind to Keen's copy.
         Assembly.Load("System.Collections.Immutable");

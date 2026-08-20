@@ -20,10 +20,14 @@ public static class MyTypeTablePatch
     [HarmonyPatch(nameof(MyTypeTable.IsSerializableClass))]
     private static bool IsSerializableClassPrefix(Type type, out bool __result)
     {
-        __result = type.FullName is "System.Delegate" or "System.MulticastDelegate"
-
-                   || (type.HasAttribute<SerializableAttribute>() && !type.HasAttribute<CompilerGeneratedAttribute>())
-                   || type.IsEnum || typeof(MulticastDelegate).IsAssignableFrom(type.BaseType);
+        __result =
+            type.FullName is "System.Delegate" or "System.MulticastDelegate"
+            || (
+                type.HasAttribute<SerializableAttribute>()
+                && !type.HasAttribute<CompilerGeneratedAttribute>()
+            )
+            || type.IsEnum
+            || typeof(MulticastDelegate).IsAssignableFrom(type.BaseType);
 
         return false;
     }
@@ -35,7 +39,10 @@ public static class MyTypeTablePatch
 public static class MyReplicationLayerBasePatch
 {
     [HarmonyPostfix]
-    [HarmonyPatch(nameof(MyReplicationLayerBase.RegisterFromAssembly), typeof(IEnumerable<Assembly>))]
+    [HarmonyPatch(
+        nameof(MyReplicationLayerBase.RegisterFromAssembly),
+        typeof(IEnumerable<Assembly>)
+    )]
     private static void RegisterFromAssemblyPostfix(MyReplicationLayerBase __instance)
     {
         var typeTable = __instance.m_typeTable;
@@ -50,16 +57,23 @@ public static class MyReplicationLayerBasePatch
             typeTable.Register(typeof(Delegate));
             typeTable.Register(typeof(MulticastDelegate));
 
-            var ok = typeTable.Contains(typeof(Delegate)) && typeTable.Contains(typeof(MulticastDelegate));
-            MyLog.Default.Log(ok ? MyLogSeverity.Info : MyLogSeverity.Error,
-                "[DotNetCompat] Explicitly registered Delegate/MulticastDelegate after scan: present={0}. " +
-                "If false, the IsSerializableClass prefix is not active (check it is in the \"Finish\" category).",
-                ok);
+            var ok =
+                typeTable.Contains(typeof(Delegate))
+                && typeTable.Contains(typeof(MulticastDelegate));
+            MyLog.Default.Log(
+                ok ? MyLogSeverity.Info : MyLogSeverity.Error,
+                "[DotNetCompat] Explicitly registered Delegate/MulticastDelegate after scan: present={0}. "
+                    + "If false, the IsSerializableClass prefix is not active (check it is in the \"Finish\" category).",
+                ok
+            );
         }
         catch (Exception ex)
         {
-            MyLog.Default.Log(MyLogSeverity.Error,
-                "[DotNetCompat] Failed to register Delegate/MulticastDelegate after scan: {0}", ex);
+            MyLog.Default.Log(
+                MyLogSeverity.Error,
+                "[DotNetCompat] Failed to register Delegate/MulticastDelegate after scan: {0}",
+                ex
+            );
         }
     }
 }

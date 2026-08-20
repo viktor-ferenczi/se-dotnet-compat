@@ -1,19 +1,22 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 #if MAGNETAR
 namespace ServerPlugin.Rewriter;
+
 #else
 namespace ClientPlugin.Rewriter;
+
 #endif
 
-
-internal sealed class ConflictingExtensionCollector(SemanticModel _semanticModel, Dictionary<IMethodSymbol, List<IMethodSymbol>> conflicts) : CSharpSyntaxWalker
+internal sealed class ConflictingExtensionCollector(
+    SemanticModel _semanticModel,
+    Dictionary<IMethodSymbol, List<IMethodSymbol>> conflicts
+) : CSharpSyntaxWalker
 {
     public override void VisitMethodDeclaration(MethodDeclarationSyntax node)
     {
@@ -25,10 +28,10 @@ internal sealed class ConflictingExtensionCollector(SemanticModel _semanticModel
         if (extendedType == null)
             return;
 
-        var conflict =
-            extendedType.GetMembers(symbol.Name)
-                        .OfType<IMethodSymbol>()
-                        .FirstOrDefault(m => m.IsStatic && IsValidOverload(m, symbol));
+        var conflict = extendedType
+            .GetMembers(symbol.Name)
+            .OfType<IMethodSymbol>()
+            .FirstOrDefault(m => m.IsStatic && IsValidOverload(m, symbol));
 
         if (conflict is null)
             return;
@@ -57,8 +60,7 @@ internal sealed class ConflictingExtensionCollector(SemanticModel _semanticModel
             var extType = extensionParams[i].Type;
             var instanceType = instanceParams[i].Type;
 
-            var conversion = _semanticModel.Compilation
-                .ClassifyConversion(extType, instanceType);
+            var conversion = _semanticModel.Compilation.ClassifyConversion(extType, instanceType);
 
             if (!conversion.IsImplicit)
                 return false;

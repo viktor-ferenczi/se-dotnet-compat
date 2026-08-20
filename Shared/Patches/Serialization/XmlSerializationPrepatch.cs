@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Linq;
-using Shared.Tools;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Shared.Tools;
 
 namespace Shared.Patches.Serialization;
 
@@ -43,28 +43,50 @@ public static class XmlSerializationPrepatch
                 break;
             }
 
-        Debug.Assert(xsiTypeInstructionIndex != -1, "Could not find ldstr \"xsi:type\" instruction");
+        Debug.Assert(
+            xsiTypeInstructionIndex != -1,
+            "Could not find ldstr \"xsi:type\" instruction"
+        );
 
         var callvirtIndex = -1;
         for (var i = xsiTypeInstructionIndex; i < il.Count; i++)
-            if (il[i].OpCode == OpCodes.Callvirt && il[i].Operand is MethodReference mr && mr.Name == "WriteAttributeString")
+            if (
+                il[i].OpCode == OpCodes.Callvirt
+                && il[i].Operand is MethodReference mr
+                && mr.Name == "WriteAttributeString"
+            )
             {
                 callvirtIndex = i;
                 break;
             }
 
-        Debug.Assert(callvirtIndex != -1, "Could not find callvirt WriteAttributeString instruction");
+        Debug.Assert(
+            callvirtIndex != -1,
+            "Could not find callvirt WriteAttributeString instruction"
+        );
 
         var existingMethodRef = (MethodReference)il[callvirtIndex].Operand;
         var xmlWriterType = existingMethodRef.DeclaringType;
-        var writeAttributeString4Param = new MethodReference("WriteAttributeString", module.TypeSystem.Void, xmlWriterType)
+        var writeAttributeString4Param = new MethodReference(
+            "WriteAttributeString",
+            module.TypeSystem.Void,
+            xmlWriterType
+        )
         {
-            HasThis = true
+            HasThis = true,
         };
-        writeAttributeString4Param.Parameters.Add(new ParameterDefinition(module.TypeSystem.String));
-        writeAttributeString4Param.Parameters.Add(new ParameterDefinition(module.TypeSystem.String));
-        writeAttributeString4Param.Parameters.Add(new ParameterDefinition(module.TypeSystem.String));
-        writeAttributeString4Param.Parameters.Add(new ParameterDefinition(module.TypeSystem.String));
+        writeAttributeString4Param.Parameters.Add(
+            new ParameterDefinition(module.TypeSystem.String)
+        );
+        writeAttributeString4Param.Parameters.Add(
+            new ParameterDefinition(module.TypeSystem.String)
+        );
+        writeAttributeString4Param.Parameters.Add(
+            new ParameterDefinition(module.TypeSystem.String)
+        );
+        writeAttributeString4Param.Parameters.Add(
+            new ParameterDefinition(module.TypeSystem.String)
+        );
 
         il[xsiTypeInstructionIndex].Operand = "xsi";
 
@@ -98,11 +120,18 @@ public static class XmlSerializationPrepatch
                 break;
             }
 
-        Debug.Assert(xsiTypeInstructionIndex != -1, "Could not find ldstr \"xsi:type\" instruction");
+        Debug.Assert(
+            xsiTypeInstructionIndex != -1,
+            "Could not find ldstr \"xsi:type\" instruction"
+        );
 
         var callvirtIndex = -1;
         for (var i = xsiTypeInstructionIndex; i < il.Count; i++)
-            if (il[i].OpCode == OpCodes.Callvirt && il[i].Operand is MethodReference mr && mr.Name == "GetAttribute")
+            if (
+                il[i].OpCode == OpCodes.Callvirt
+                && il[i].Operand is MethodReference mr
+                && mr.Name == "GetAttribute"
+            )
             {
                 callvirtIndex = i;
                 break;
@@ -112,9 +141,13 @@ public static class XmlSerializationPrepatch
 
         var existingMethodRef = (MethodReference)il[callvirtIndex].Operand;
         var xmlReaderType = existingMethodRef.DeclaringType;
-        var getAttribute2Param = new MethodReference("GetAttribute", module.TypeSystem.String, xmlReaderType)
+        var getAttribute2Param = new MethodReference(
+            "GetAttribute",
+            module.TypeSystem.String,
+            xmlReaderType
+        )
         {
-            HasThis = true
+            HasThis = true,
         };
         getAttribute2Param.Parameters.Add(new ParameterDefinition(module.TypeSystem.String));
         getAttribute2Param.Parameters.Add(new ParameterDefinition(module.TypeSystem.String));

@@ -1,7 +1,7 @@
 using System.Linq;
-using Shared.Tools;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Shared.Tools;
 
 namespace Shared.Patches.ImageProcessing;
 
@@ -64,7 +64,8 @@ public static class DecodePixelDataPrepatch
             }
         if (target == null)
             throw new System.InvalidOperationException(
-                "DecodePixelDataPrepatch: no Ldarg_1 in DecodeInterlacedPixelData");
+                "DecodePixelDataPrepatch: no Ldarg_1 in DecodeInterlacedPixelData"
+            );
 
         var rewritten = false;
         foreach (var instr in il)
@@ -77,7 +78,8 @@ public static class DecodePixelDataPrepatch
             }
         if (!rewritten)
             throw new System.InvalidOperationException(
-                "DecodePixelDataPrepatch: no Ret in DecodeInterlacedPixelData");
+                "DecodePixelDataPrepatch: no Ret in DecodeInterlacedPixelData"
+            );
 
         il.RecordPatchedCode(method);
     }

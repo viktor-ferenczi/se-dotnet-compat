@@ -9,14 +9,16 @@ namespace Shared.Patches.NullSafety;
 public static class MyAnalyticsBasePatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch(nameof(MyAnalyticsBase.ReportEvent), 
+    [HarmonyPatch(
+        nameof(MyAnalyticsBase.ReportEvent),
         typeof(IMyAnalyticsEvent),
         typeof(DateTime),
         typeof(string),
         typeof(string),
         typeof(string),
         typeof(string),
-        typeof(Exception))]
+        typeof(Exception)
+    )]
     private static bool ReportEventPrefix(IMyAnalyticsEvent analyticsEvent)
     {
         // Stock analytics still crashes on .NET 10.

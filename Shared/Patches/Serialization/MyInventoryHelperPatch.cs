@@ -16,7 +16,10 @@ public static class MyInventoryHelperPatch
 {
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyInventoryHelper.GetItemsCheckData))]
-    private static bool GetItemsCheckDataPrefix(List<MyGameInventoryItem> items, ref byte[] __result)
+    private static bool GetItemsCheckDataPrefix(
+        List<MyGameInventoryItem> items,
+        ref byte[] __result
+    )
     {
         __result = WriteInventoryItems(items ?? []);
         return false;
@@ -32,7 +35,11 @@ public static class MyInventoryHelperPatch
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyInventoryHelper.CheckItemData))]
-    private static bool ReadInventoryItemsPrefix(byte[] checkData, out bool checkResult, out List<MyGameInventoryItem> __result)
+    private static bool ReadInventoryItemsPrefix(
+        byte[] checkData,
+        out bool checkResult,
+        out List<MyGameInventoryItem> __result
+    )
     {
         checkResult = false;
         __result = [];
@@ -51,15 +58,22 @@ public static class MyInventoryHelperPatch
         return false;
     }
 
-    private static bool TryDecodeInventory(byte[] checkData, out int count, out IEnumerable<ClassRecord> inventoryItems)
+    private static bool TryDecodeInventory(
+        byte[] checkData,
+        out int count,
+        out IEnumerable<ClassRecord> inventoryItems
+    )
     {
         count = 0;
         inventoryItems = null;
 
         var decodedList = NrbfDecoder.DecodeClassRecord(new MemoryStream(checkData));
-        if (decodedList.TypeNameMatches(typeof(List<MyGameInventoryItem>)) &&
-            decodedList.GetArrayRecord("_items") is ArrayRecord decodedArray &&
-            decodedArray.GetArray(typeof(MyGameInventoryItem[]), false) is SerializationRecord[] items)
+        if (
+            decodedList.TypeNameMatches(typeof(List<MyGameInventoryItem>))
+            && decodedList.GetArrayRecord("_items") is ArrayRecord decodedArray
+            && decodedArray.GetArray(typeof(MyGameInventoryItem[]), false)
+                is SerializationRecord[] items
+        )
         {
             count = decodedList.GetInt32("_size");
             inventoryItems = items.Take(count).Where(i => i is ClassRecord).Cast<ClassRecord>();
@@ -88,7 +102,9 @@ public static class MyInventoryHelperPatch
             return null;
 
         var definitionTypeRecord = d.GetClassRecord(BackingField("DefinitionType"));
-        if (definitionTypeRecord?.TypeNameMatches(typeof(MyGameInventoryItemDefinitionType)) != true)
+        if (
+            definitionTypeRecord?.TypeNameMatches(typeof(MyGameInventoryItemDefinitionType)) != true
+        )
             return null;
 
         var itemSlotRecord = d.GetClassRecord(BackingField("ItemSlot"));
@@ -109,12 +125,13 @@ public static class MyInventoryHelperPatch
             ToolName = d.GetString(BackingField("ToolName")),
             NameColor = d.GetString(BackingField("NameColor")),
             BackgroundColor = d.GetString(BackingField("BackgroundColor")),
-            DefinitionType = (MyGameInventoryItemDefinitionType)definitionTypeRecord.GetInt32("value__"),
+            DefinitionType = (MyGameInventoryItemDefinitionType)
+                definitionTypeRecord.GetInt32("value__"),
             Hidden = d.GetBoolean(BackingField("Hidden")),
             IsStoreHidden = d.GetBoolean(BackingField("IsStoreHidden")),
             CanBePurchased = d.GetBoolean(BackingField("CanBePurchased")),
             ItemQuality = (MyGameInventoryItemQuality)qualityRecord.GetInt32("value__"),
-            Exchange = d.GetString(BackingField("Exchange"))
+            Exchange = d.GetString(BackingField("Exchange")),
         };
 
         return new MyGameInventoryItem
@@ -124,7 +141,7 @@ public static class MyInventoryHelperPatch
             Quantity = quantity,
             UsingCharacters = [],
             IsStoreFakeItem = isStoreFakeItem,
-            IsNew = isNew
+            IsNew = isNew,
         };
     }
 
@@ -169,17 +186,27 @@ public static class MyInventoryHelperPatch
         private const int SystemLibraryId = 2;
         private const int VrageLibraryId = 3;
 
-        private static readonly string SystemAssemblyName = typeof(List<MyGameInventoryItem>).Assembly.FullName;
-        private static readonly string VrageAssemblyName = typeof(MyGameInventoryItem).Assembly.FullName;
+        private static readonly string SystemAssemblyName = typeof(List<MyGameInventoryItem>)
+            .Assembly
+            .FullName;
+        private static readonly string VrageAssemblyName = typeof(MyGameInventoryItem)
+            .Assembly
+            .FullName;
 
         private static readonly string ListTypeName = TypeName(typeof(List<MyGameInventoryItem>));
         private static readonly string ItemArrayTypeName = TypeName(typeof(MyGameInventoryItem[]));
         private static readonly string ItemTypeName = TypeName(typeof(MyGameInventoryItem));
-        private static readonly string DefinitionTypeName = TypeName(typeof(MyGameInventoryItemDefinition));
+        private static readonly string DefinitionTypeName = TypeName(
+            typeof(MyGameInventoryItemDefinition)
+        );
         private static readonly string HashSetTypeName = TypeName(typeof(HashSet<long>));
         private static readonly string ItemSlotTypeName = TypeName(typeof(MyGameInventoryItemSlot));
-        private static readonly string DefinitionTypeTypeName = TypeName(typeof(MyGameInventoryItemDefinitionType));
-        private static readonly string ItemQualityTypeName = TypeName(typeof(MyGameInventoryItemQuality));
+        private static readonly string DefinitionTypeTypeName = TypeName(
+            typeof(MyGameInventoryItemDefinitionType)
+        );
+        private static readonly string ItemQualityTypeName = TypeName(
+            typeof(MyGameInventoryItemQuality)
+        );
 
         private int m_nextObjectId = 4;
 
@@ -217,8 +244,14 @@ public static class MyInventoryHelperPatch
                 ListTypeName,
                 ["_items", "_size", "_version", "_syncRoot"],
                 [BinaryTypeClass, BinaryTypePrimitive, BinaryTypePrimitive, BinaryTypeObject],
-                [new ClassTypeInfo(ItemArrayTypeName, VrageLibraryId), PrimitiveInt32, PrimitiveInt32, null],
-                SystemLibraryId);
+                [
+                    new ClassTypeInfo(ItemArrayTypeName, VrageLibraryId),
+                    PrimitiveInt32,
+                    PrimitiveInt32,
+                    null,
+                ],
+                SystemLibraryId
+            );
 
             WriteMemberReference(arrayObjectId);
             writer.Write(items.Count);
@@ -259,7 +292,7 @@ public static class MyInventoryHelperPatch
                     BackingField("Quantity"),
                     BackingField("UsingCharacters"),
                     BackingField("IsStoreFakeItem"),
-                    BackingField("IsNew")
+                    BackingField("IsNew"),
                 ],
                 [
                     BinaryTypePrimitive,
@@ -267,7 +300,7 @@ public static class MyInventoryHelperPatch
                     BinaryTypePrimitive,
                     BinaryTypeClass,
                     BinaryTypePrimitive,
-                    BinaryTypePrimitive
+                    BinaryTypePrimitive,
                 ],
                 [
                     PrimitiveUInt64,
@@ -275,9 +308,10 @@ public static class MyInventoryHelperPatch
                     PrimitiveUInt16,
                     new ClassTypeInfo(HashSetTypeName, SystemLibraryId),
                     PrimitiveBoolean,
-                    PrimitiveBoolean
+                    PrimitiveBoolean,
                 ],
-                VrageLibraryId);
+                VrageLibraryId
+            );
 
             writer.Write(item.ID);
 
@@ -315,7 +349,7 @@ public static class MyInventoryHelperPatch
                     BackingField("IsStoreHidden"),
                     BackingField("CanBePurchased"),
                     BackingField("ItemQuality"),
-                    BackingField("Exchange")
+                    BackingField("Exchange"),
                 ],
                 [
                     BinaryTypePrimitive,
@@ -335,7 +369,7 @@ public static class MyInventoryHelperPatch
                     BinaryTypePrimitive,
                     BinaryTypePrimitive,
                     BinaryTypeClass,
-                    BinaryTypeString
+                    BinaryTypeString,
                 ],
                 [
                     PrimitiveInt32,
@@ -355,9 +389,10 @@ public static class MyInventoryHelperPatch
                     PrimitiveBoolean,
                     PrimitiveBoolean,
                     new ClassTypeInfo(ItemQualityTypeName, VrageLibraryId),
-                    null
+                    null,
                 ],
-                VrageLibraryId);
+                VrageLibraryId
+            );
 
             writer.Write(definition.ID);
             WriteString(definition.Name);
@@ -387,7 +422,8 @@ public static class MyInventoryHelperPatch
                 ["value__"],
                 [BinaryTypePrimitive],
                 [PrimitiveInt32],
-                VrageLibraryId);
+                VrageLibraryId
+            );
 
             writer.Write(value);
         }
@@ -398,7 +434,8 @@ public static class MyInventoryHelperPatch
             string[] memberNames,
             byte[] binaryTypes,
             object[] additionalInfos,
-            int libraryId)
+            int libraryId
+        )
         {
             writer.Write(ClassWithMembersAndTypes);
             writer.Write(objectId);

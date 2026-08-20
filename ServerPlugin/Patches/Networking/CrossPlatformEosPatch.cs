@@ -25,6 +25,7 @@ public static class CrossPlatformEosPatch
         config.NetworkType = "eos";
 
         Console.WriteLine(
-            "[DotNetCompat] CrossPlatform world: switching to EOS networking so crossplay clients can discover this server");
+            "[DotNetCompat] CrossPlatform world: switching to EOS networking so crossplay clients can discover this server"
+        );
     }
 }

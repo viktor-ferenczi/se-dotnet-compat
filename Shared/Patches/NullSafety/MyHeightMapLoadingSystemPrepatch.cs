@@ -1,8 +1,8 @@
 using System.Linq;
-using Shared.Tools;
 using HarmonyLib;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Shared.Tools;
 
 namespace Shared.Patches.NullSafety;
 

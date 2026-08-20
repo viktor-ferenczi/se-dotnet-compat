@@ -12,15 +12,20 @@ namespace ClientPlugin.Patches.Scripting;
 
 // Visual scripts store mscorlib in method signatures, but .NET 10 reports
 // System.Private.CoreLib. Strip the assembly details before comparing them.
-[HarmonyPatch(typeof(MyVisualSyntaxFunctionNode), MethodType.Constructor,
-    typeof(MyObjectBuilder_ScriptNode), typeof(Type))]
+[HarmonyPatch(
+    typeof(MyVisualSyntaxFunctionNode),
+    MethodType.Constructor,
+    typeof(MyObjectBuilder_ScriptNode),
+    typeof(Type)
+)]
 [HarmonyPatchCategory("Finish")]
 static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
 {
     // Matches the assembly portion of a generic argument's qualified name.
     private static readonly Regex s_asmQualifier = new Regex(
         @", [\w.]+, Version=\d+\.\d+\.\d+\.\d+, Culture=\w+, PublicKeyToken=(?:[a-fA-F0-9]+|null)",
-        RegexOptions.Compiled);
+        RegexOptions.Compiled
+    );
 
     // The game registers more closed generic methods while loading a session.
     private static Dictionary<string, MethodInfo> s_normalizedIndex;
@@ -28,8 +33,10 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
 
     [HarmonyPostfix]
     [HarmonyPriority(Priority.First)]
-    static void RetryWithNormalizedSignature(MyVisualSyntaxFunctionNode __instance,
-                                             MyObjectBuilder_ScriptNode ob)
+    static void RetryWithNormalizedSignature(
+        MyVisualSyntaxFunctionNode __instance,
+        MyObjectBuilder_ScriptNode ob
+    )
     {
         if (__instance.m_methodInfo != null)
             return;
@@ -54,7 +61,10 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
         Unsafe.AsRef(in __instance.m_methodInfo) = found;
 
         // The constructor normally calls InitUsing after a successful lookup.
-        try { __instance.InitUsing(); }
+        try
+        {
+            __instance.InitUsing();
+        }
         catch { }
     }
 
@@ -69,15 +79,14 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
             if (t != null)
                 MyVisualScriptingProxy.GetMethod(t, sigToProbe);
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     private static MethodInfo LookupByNormalized(string targetSig)
     {
         var byName = MyVisualScriptingProxy.GetMethods();
-        var whitelisted = MyVisualScriptingProxy.GetWhitelistedMethods(null) as ICollection<MethodInfo>
+        var whitelisted =
+            MyVisualScriptingProxy.GetWhitelistedMethods(null) as ICollection<MethodInfo>
             ?? new List<MethodInfo>(MyVisualScriptingProxy.GetWhitelistedMethods(null));
 
         int total = byName.Count + whitelisted.Count;
@@ -108,7 +117,8 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
         foreach (var m in byName)
         {
             var hit = TryPrefixMatch(m, prefix);
-            if (hit != null) return hit;
+            if (hit != null)
+                return hit;
         }
         var whitelisted = MyVisualScriptingProxy.GetWhitelistedMethods(null);
         if (whitelisted != null)
@@ -116,7 +126,8 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
             foreach (var m in whitelisted)
             {
                 var hit = TryPrefixMatch(m, prefix);
-                if (hit != null) return hit;
+                if (hit != null)
+                    return hit;
             }
         }
         return null;
@@ -149,9 +160,7 @@ static class MyVisualSyntaxFunctionNodeNetCoreLookupPatch
             if (!string.IsNullOrEmpty(key))
                 idx[key] = m;
         }
-        catch
-        {
-        }
+        catch { }
     }
 
     public static string NormalizeAssemblyQualifiers(string s)

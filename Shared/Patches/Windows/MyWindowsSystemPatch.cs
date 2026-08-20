@@ -26,7 +26,12 @@ public static class MyWindowsSystemPatch
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyWindowsSystem.GetInfoCPU))]
-    private static bool GetInfoCPUPrefix(MyWindowsSystem __instance, out uint frequency, out uint physicalCores, ref string __result)
+    private static bool GetInfoCPUPrefix(
+        MyWindowsSystem __instance,
+        out uint frequency,
+        out uint physicalCores,
+        ref string __result
+    )
     {
         var m_cpuInfo = __instance.m_cpuInfo;
         if (m_cpuInfo.Name == null)
