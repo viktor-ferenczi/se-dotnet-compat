@@ -6,15 +6,12 @@ namespace ClientPlugin.Patches.NullSafety;
 
 [HarmonyPatchCategory("Init")]
 [HarmonyPatch(typeof(MyCharacter))]
-// ReSharper disable once UnusedType.Global
 public static class MyCharacterPatch
 {
     [HarmonyPrefix]
     [HarmonyPatch("OnControlReleased")]
-    // ReSharper disable once UnusedMember.Local
     private static bool OnControlReleasedPrefix()
     {
-        // Prevent crash in MyCubeBuilder.Static.Deactivate()
         return MyCubeBuilder.Static != null;
     }
 }

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using ServerPlugin.Tools;
 using HarmonyLib;
 using Sandbox.Engine.Voxels;
 using SharpDX.Multimedia;
@@ -14,18 +13,17 @@ using VRage.Audio;
 using VRage.Library.Compression;
 using VRage.Render11.Shader;
 using VRageRender.Import;
+using Shared.Tools;
 
 namespace ServerPlugin.Patches.Serialization;
 
 [HarmonyPatch]
 [HarmonyPatchCategory("Finish")]
-// ReSharper disable once UnusedType.Global
 static class StreamReadPatch
 {
     private static readonly MethodInfo OriginalReadMethod = AccessTools.Method(typeof(Stream), nameof(Stream.Read), [typeof(byte[]), typeof(int), typeof(int)]);
     private static readonly MethodInfo ReplacementReadMethod = AccessTools.Method(typeof(StreamReadPatch), nameof(ReplacementRead));
 
-    // ReSharper disable once UnusedMember.Global
     [HarmonyTargetMethods]
     public static IEnumerable<MethodBase> TargetMethods()
     {
@@ -94,7 +92,6 @@ static class StreamReadPatch
         return method;
     }
 
-    // ReSharper disable once UnusedMember.Global
     [HarmonyTranspiler]
     public static IEnumerable<CodeInstruction> StreamReadTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase patchedMethod)
     {

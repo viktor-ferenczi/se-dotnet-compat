@@ -10,10 +10,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		verify_props.bat = verify_props.bat
 		AGENTS.md = AGENTS.md
 		.github\copilot-instructions.md = .github\copilot-instructions.md
-		DotNetCompat.xml = DotNetCompat.xml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerPlugin", "ServerPlugin\ServerPlugin.csproj", "{C447089D-FD8A-4262-B417-7088AB6DFD69}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared", "Shared\Shared.shproj", "{6B929D3C-50E6-4218-B4D8-E5B34B47799D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

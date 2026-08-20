@@ -1,8 +1,8 @@
 ﻿using HarmonyLib;
 using VRage.Plugins;
 
-// Set the assembly version manually if compiled by Pulsar (it won't create what was in AssemblyInfo.cs before)
-#if !DEV_BUILD
+// Define assembly version when compiled by Pulsar
+#if !LOCAL_BUILD
 using System.Reflection;
 
 [assembly: AssemblyVersion("10.0.5.0")]
@@ -11,7 +11,6 @@ using System.Reflection;
 
 namespace ClientPlugin;
 
-// ReSharper disable once UnusedType.Global
 public class Plugin : IPlugin
 {
     public const string Name = "DotNetCompat";

@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<PluginData xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="GitHubPlugin">
+
+    <Id>dotnet-compat</Id>
+    <RepoId>CometWorks/dotnet-compat</RepoId>
+
+    <FriendlyName>DotNetCompat</FriendlyName>
+    <Author>Viktor</Author>
+
+    <Tooltip>.NET 10.0 support for Space Engineers</Tooltip>
+    <Description>Patches Space Engineers to run on .NET 10.0. The plugin loads automatically when needed.</Description>
+
+    <SourceDirectories>
+        <Directory>Shared</Directory>
+        <Directory>ServerPlugin</Directory>
+    </SourceDirectories>
+
+	<NuGetReferences>
+		<PackageReference Include="System.Management" Version="4.5.0" />
+		<PackageReference Include="System.Formats.Nrbf" Version="10.0.1" />
+		<PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
+	</NuGetReferences>	
+
+    <Runtimes>CoreCLR</Runtimes>
+    <Hidden>true</Hidden>
+    <Commit>TODO</Commit>
+
+</PluginData>

@@ -5,26 +5,7 @@ using Mono.Cecil.Cil;
 namespace ServerPlugin.Patches.Windows;
 
 /// <summary>
-/// Removes the WinForms configurator setup from the dedicated server entry
-/// point so the DS can run on a plain net10.0 host (no Microsoft.WindowsDesktop.App).
-///
-/// SpaceEngineersDedicated.MyProgram.Main begins by populating three static
-/// fields used only by the (never-shown on a headless server) configurator UI:
-///   * VRage.Dedicated.Configurator.SelectInstanceForm.LogoImage = Resources.SpaceEngineersDSLogo
-///       -> pulls in System.Drawing.Common
-///   * VRage.Dedicated.ConfigForm.GameAttributes = Game.SpaceEngineers
-///   * VRage.Dedicated.ConfigForm.OnReset = delegate { ... }
-///       -> ConfigForm/SelectInstanceForm derive from System.Windows.Forms.Form
-///
-/// Because Main *references* these Form-derived types, the JIT eagerly tries to
-/// load System.Windows.Forms (and System.Drawing) while compiling Main, throwing
-/// FileNotFoundException before the server ever starts. Neither assembly exists
-/// on a plain net10.0 host.
-///
-/// We NOP the contiguous configurator block (the logo load through the OnReset
-/// assignment). It is self-contained: net stack delta 0, no external branch
-/// targets into the range. Everything after it (MyVRageWindows.Init,
-/// DedicatedServer.Run, ...) has no WinForms/Drawing references.
+/// Removes the unused configurator code that makes Main load WinForms.
 /// </summary>
 public static class MyProgramPrepatch
 {
@@ -43,8 +24,7 @@ public static class MyProgramPrepatch
 
         var instructions = main.Body.Instructions;
 
-        // Anchor the block on its first and last instruction by member reference,
-        // not by hardcoded IL offset (robust against minor game updates).
+        // Member names survive small IL changes better than offsets.
         var start = -1;
         var end = -1;
 
@@ -52,7 +32,6 @@ public static class MyProgramPrepatch
         {
             var instr = instructions[i];
 
-            // First instruction: load the DS logo bitmap.
             if (start < 0 &&
                 (instr.OpCode == OpCodes.Call || instr.OpCode == OpCodes.Callvirt) &&
                 instr.Operand is MethodReference mr &&
@@ -62,7 +41,6 @@ public static class MyProgramPrepatch
                 continue;
             }
 
-            // Last instruction: assign ConfigForm.OnReset.
             if (start >= 0 &&
                 instr.OpCode == OpCodes.Stsfld &&
                 instr.Operand is FieldReference fr &&
@@ -77,9 +55,7 @@ public static class MyProgramPrepatch
         if (start < 0 || end < 0 || end < start)
             return;
 
-        // Neutralize the block in place so object identity (and therefore any
-        // branch target instructions, e.g. the delegate-cache brtrue.s within
-        // the range) stays valid.
+        // NOP in place because branches may point into this block.
         for (var i = start; i <= end; i++)
         {
             instructions[i].OpCode = OpCodes.Nop;

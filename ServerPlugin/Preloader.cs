@@ -1,25 +1,18 @@
-// ReSharper disable CheckNamespace
-// ReSharper disable InconsistentNaming
-
 using System;
 using System.Reflection;
 using System.Collections.Generic;
-using ServerPlugin.Patches.ImageProcessing;
-using ServerPlugin.Patches.NullSafety;
-using ServerPlugin.Patches.Serialization;
 using ServerPlugin.Patches.Windows;
 using HarmonyLib;
 using Mono.Cecil;
+using Shared.Patches.ImageProcessing;
+using Shared.Patches.NullSafety;
+using Shared.Patches.Serialization;
 
-// IMPORTANT: MUST NOT USE A NAMESPACE, otherwise the loader won't find the Preloader class!
-//namespace ServerPlugin;
+// Magnetar requires Preloader in the global namespace.
 
-// ReSharper disable once UnusedType.Global
 public static class Preloader
 {
-    // Assembly names this plugin overrides via AssemblyResolve. Loaded from the
-    // plugin's NuGet dependencies (staged by Magnetar into NuGet/bin/<hash>/ and
-    // served by Magnetar's AssemblyResolver hook on AppDomain.AssemblyResolve).
+    // Magnetar stages and resolves these NuGet dependencies.
     private static readonly HashSet<string> OverriddenAssemblies = new(StringComparer.Ordinal)
     {
         "System.Management",
@@ -27,8 +20,7 @@ public static class Preloader
         "System.Diagnostics.PerformanceCounter",
     };
 
-    // Tracks assembly names currently being resolved on this thread to break
-    // AssemblyResolve recursion. See ResolveOverriddenAssembly for details.
+    // Assembly.Load can re-enter AssemblyResolve, so track names per thread.
     [System.ThreadStatic]
     private static HashSet<string> _resolvingTls;
     private static HashSet<string> Resolving =>
@@ -40,11 +32,6 @@ public static class Preloader
         if (!OverriddenAssemblies.Contains(targetName))
             return null;
 
-        // Re-entry guard: Assembly.Load(name) fires AssemblyResolve again if the
-        // runtime can't bind the name to a TPA/probe path. Without a guard the
-        // handler recurses until the stack overflows (exit code 0xC00000FD) with
-        // no useful diagnostic. If we re-enter for the same name, bail with a
-        // clear error instead.
         if (!Resolving.Add(targetName))
         {
             Console.Error.WriteLine(
@@ -70,7 +57,6 @@ public static class Preloader
         }
     }
 
-    // ReSharper disable once UnusedMember.Global
     public static IEnumerable<string> TargetDLLs { get; } =
     [
         // Game DLLs
@@ -96,7 +82,6 @@ public static class Preloader
         "SixLabors.ImageSharp.dll",
     ];
 
-    // ReSharper disable once UnusedMember.Global
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     public static void Patch(AssemblyDefinition asmDef)
     {
@@ -109,20 +94,15 @@ public static class Preloader
         MyProgramPrepatch.Prepatch(asmDef);
     }
 
-    // ReSharper disable once UnusedMember.Global
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     public static void Finish()
     {
         // See https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
         AppContext.SetSwitch("System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization", true);
 
-        // Fixes runtime loading the Keen version in some cases by initializing it explicitly
+        // Load this before the game can bind to Keen's copy.
         Assembly.Load("System.Collections.Immutable");
 
-        // Override game DLLs with the versions added as NuGet dependency by this plugin.
-        // Magnetar's AssemblyResolver serves these from NuGet/bin/<hash>/ via the same
-        // AppDomain.AssemblyResolve event when ResolveOverriddenAssembly delegates to
-        // Assembly.Load(name) and the runtime probe fails.
         AppDomain.CurrentDomain.AssemblyResolve += ResolveOverriddenAssembly;
 
 #if DEBUG && HARMONY_DEBUG
