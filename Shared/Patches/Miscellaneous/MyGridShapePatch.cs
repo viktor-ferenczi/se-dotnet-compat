@@ -14,11 +14,11 @@ namespace Shared.Patches.Miscellaneous;
 public static class MyGridShapePatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("AddShapesFromCollector")]
-    private static bool AddShapesFromCollectorTranspiler(MyCubeBlockCollector ___m_blockCollector, HkGridShape ___m_root)
+    [HarmonyPatch(nameof(MyGridShape.AddShapesFromCollector))]
+    private static bool AddShapesFromCollectorPrefix(MyGridShape __instance)
     {
-        var m_blockCollector = ___m_blockCollector;
-        var m_root = ___m_root;
+        var m_blockCollector = __instance.m_blockCollector;
+        var m_root = __instance.m_root;
 
         var shapes = new HkShape[255];
 

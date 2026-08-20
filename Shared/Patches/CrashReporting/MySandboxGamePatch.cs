@@ -10,7 +10,7 @@ namespace Shared.Patches.CrashReporting;
 public static class MySandboxGamePatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("InitModAPI")]
+    [HarmonyPatch(nameof(MySandboxGame.InitModAPI))]
     [SuppressMessage("ReSharper", "UnusedMember.Local")]
     private static bool InitModAPIPrefix()
     {

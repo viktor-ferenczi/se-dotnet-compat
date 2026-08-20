@@ -10,7 +10,7 @@ namespace Shared.Patches.NullSafety;
 public static class MyCharacterDiscoveryComponentPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("OnFactionDiscovered")]
+    [HarmonyPatch(nameof(MyCharacterDiscoveryComponent.OnFactionDiscovered))]
     private static bool OnFactionDiscoveredPrefix()
     {
         return !Sync.IsDedicated && MySession.Static?.LocalHumanPlayer != null;

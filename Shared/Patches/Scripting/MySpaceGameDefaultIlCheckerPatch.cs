@@ -25,7 +25,7 @@ namespace Shared.Patches.Scripting;
 public static class MySpaceGameDefaultIlCheckerPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("AllDeclaredMembers")]
+    [HarmonyPatch(nameof(MySpaceGameDefaultIlChecker.AllDeclaredMembers))]
     private static bool AllDeclaredMembersPrefix(Type type, ref IEnumerable<MemberInfo> __result)
     {
         var members = type.GetMembers(BindingFlags.DeclaredOnly | BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public);
@@ -34,7 +34,7 @@ public static class MySpaceGameDefaultIlCheckerPatch
     }
     
     [HarmonyPrefix]
-    [HarmonyPatch("AllowDefaultNamespaces")]
+    [HarmonyPatch(nameof(MySpaceGameDefaultIlChecker.AllowDefaultNamespaces))]
     private static bool AllowDefaultNamespacesPrefix(IMyWhitelistBatch handle)
     {
         handle.AllowNamespaceOfTypes(MyWhitelistTarget.Both, typeof(IEnumerator), typeof(HashSet<>), typeof(LinkedList<>), typeof(StringBuilder), typeof(Regex), typeof(Calendar));

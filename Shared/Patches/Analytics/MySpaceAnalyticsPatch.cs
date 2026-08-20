@@ -8,7 +8,7 @@ namespace Shared.Patches.Analytics;
 public static class MySpaceAnalyticsPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("StartSession")]
+    [HarmonyPatch(nameof(MySpaceAnalytics.StartSession))]
     private static bool StartSessionPrefix()
     {
         return false;

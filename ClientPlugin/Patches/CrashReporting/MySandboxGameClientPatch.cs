@@ -5,7 +5,7 @@ using Sandbox.Graphics.GUI;
 namespace ClientPlugin.Patches.CrashReporting;
 
 [HarmonyPatchCategory("Finish")]
-[HarmonyPatch(typeof(MySandboxGame), "OnDotNetHotfixPopupClosed")]
+[HarmonyPatch(typeof(MySandboxGame), nameof(MySandboxGame.OnDotNetHotfixPopupClosed))]
 public static class MySandboxGameClientPatch
 {
     [HarmonyPrefix]

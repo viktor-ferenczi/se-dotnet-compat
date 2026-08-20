@@ -12,14 +12,14 @@ namespace ClientPlugin.Patches.NullSafety;
 public static class MyGridClipboardPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("Deactivate")]
+    [HarmonyPatch(nameof(MyGridClipboard.Deactivate))]
     private static bool DeactivatePrefix()
     {
         return MyClipboardComponent.Static != null;
     }
 
     [HarmonyPrefix]
-    [HarmonyPatch("AddSingleBlockRequirements")]
+    [HarmonyPatch(nameof(MyGridClipboard.AddSingleBlockRequirements))]
     private static bool AddSingleBlockRequirementsPrefix(MyObjectBuilder_CubeBlock block, MyComponentList buildComponents)
     {
         if (block?.ConstructionStockpile?.Items != null) 

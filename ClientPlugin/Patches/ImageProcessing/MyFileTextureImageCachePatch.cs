@@ -10,7 +10,7 @@ namespace ClientPlugin.Patches.ImageProcessing;
 public static class MyFileTextureImageCachePatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("LoadImage", typeof(string), typeof(bool))]
+    [HarmonyPatch(nameof(MyFileTextureImageCache.LoadImage), typeof(string), typeof(bool))]
     private static bool LoadImagePrefix(ref string filepath)
     {
         if (filepath.ToLower().EndsWith(".zip"))

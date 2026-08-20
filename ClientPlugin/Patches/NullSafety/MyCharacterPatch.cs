@@ -9,7 +9,7 @@ namespace ClientPlugin.Patches.NullSafety;
 public static class MyCharacterPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("OnControlReleased")]
+    [HarmonyPatch(nameof(MyCharacter.OnControlReleased))]
     private static bool OnControlReleasedPrefix()
     {
         return MyCubeBuilder.Static != null;

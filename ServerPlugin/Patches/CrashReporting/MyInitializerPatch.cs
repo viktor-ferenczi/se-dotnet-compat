@@ -17,7 +17,7 @@ public static class MyInitializerServerPatch
     private const uint SEM_NOGPFAULTERRORBOX = 0x0002;
 
     [HarmonyPrefix]
-    [HarmonyPatch("InitExceptionHandling")]
+    [HarmonyPatch(nameof(MyInitializer.InitExceptionHandling))]
     [SuppressMessage("ReSharper", "UnusedMember.Local")]
     private static void InitExceptionHandlingPrefix()
     {
@@ -25,7 +25,7 @@ public static class MyInitializerServerPatch
     }
 
     [HarmonyPrefix]
-    [HarmonyPatch("OnCrash")]
+    [HarmonyPatch(nameof(MyInitializer.OnCrash))]
     [SuppressMessage("ReSharper", "UnusedMember.Local")]
     private static bool OnCrashPrefix(string logPath, Exception exception, bool oom)
     {

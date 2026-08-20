@@ -11,14 +11,14 @@ namespace Shared.Patches.CrashReporting;
 public static class MyCrashReportingPatch
 {
     [HarmonyPrefix]
-    [HarmonyPatch("PrepareCrashAnalyticsReporting")]
+    [HarmonyPatch(nameof(MyCrashReporting.PrepareCrashAnalyticsReporting))]
     private static bool PrepareCrashAnalyticsReportingPrefix()
     {
         return false;
     }
 
     [HarmonyPrefix]
-    [HarmonyPatch("ExtractCrashAnalyticsReport")]
+    [HarmonyPatch(nameof(MyCrashReporting.ExtractCrashAnalyticsReport))]
     private static bool ExtractCrashAnalyticsReportPrefix(out bool exitAfterReport, out string logPath, out CrashInfo info, out bool isUnsupportedGpu, ref bool __result)
     {
         logPath = null;

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
@@ -16,9 +15,8 @@ public static class MyScriptCompilerPatch
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyScriptCompiler.AddReferencedAssemblies))]
     public static bool AddReferencedAssembliesPrefix(
-        string[] assemblyLocations,
-        HashSet<string> ___m_assemblyLocations,
-        List<MetadataReference> ___m_metadataReferences)
+        MyScriptCompiler __instance,
+        string[] assemblyLocations)
     {
         foreach (var assemblyLocation in assemblyLocations)
         {
@@ -31,8 +29,8 @@ public static class MyScriptCompilerPatch
                 continue;
             }
 
-            if (___m_assemblyLocations.Add(assemblyLocation))
-                ___m_metadataReferences.Add(MetadataReference.CreateFromFile(assemblyLocation));
+            if (__instance.m_assemblyLocations.Add(assemblyLocation))
+                __instance.m_metadataReferences.Add(MetadataReference.CreateFromFile(assemblyLocation));
         }
 
         return false;
@@ -40,7 +38,7 @@ public static class MyScriptCompilerPatch
 
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyScriptCompiler.AddImplicitInGameNamespacesFromTypes))]
-    public static bool AddImplicitInGameNamespacesFromTypesPrefix(Type[] types, HashSet<string> ___m_implicitScriptNamespaces)
+    public static bool AddImplicitInGameNamespacesFromTypesPrefix(MyScriptCompiler __instance, Type[] types)
     {
         foreach (var type in types)
         {
@@ -56,7 +54,7 @@ public static class MyScriptCompilerPatch
                 continue;
             }
 
-            ___m_implicitScriptNamespaces.Add(type.Namespace);
+            __instance.m_implicitScriptNamespaces.Add(type.Namespace);
         }
 
         return false;

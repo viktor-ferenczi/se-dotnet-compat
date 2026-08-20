@@ -6,7 +6,7 @@ using VRage.FileSystem;
 namespace Shared.Patches.Windows;
 
 [HarmonyPatchCategory("Init")]
-[HarmonyPatch(typeof(MyFileProviderAggregator), "GetFiles", [typeof(string), typeof(string), typeof(MySearchOption)])]
+[HarmonyPatch(typeof(MyFileProviderAggregator), nameof(MyFileProviderAggregator.GetFiles), [typeof(string), typeof(string), typeof(MySearchOption)])]
 public static class MyFileProviderAggregatorPatch
 {
     public static void Postfix(ref IEnumerable<string> __result)

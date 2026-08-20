@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using HarmonyLib;
 using Microsoft.CodeAnalysis;
@@ -26,14 +25,7 @@ static class MyDependencyCollectorTpaPatch
             }
 
             // RegisterAssembly only accepts loaded assemblies, so update its backing set.
-            var refsField = AccessTools.Field(typeof(MyDependencyCollector), "m_references");
-            var refs = refsField?.GetValue(__instance) as HashSet<MetadataReference>;
-            if (refs == null)
-            {
-                MyLog.Default.Log(MyLogSeverity.Warning,
-                    "[LinuxCompat VS-DEPS] m_references field missing/wrong type; cannot patch references.");
-                return;
-            }
+            var refs = __instance.m_references;
 
             int added = 0;
             int skipped = 0;

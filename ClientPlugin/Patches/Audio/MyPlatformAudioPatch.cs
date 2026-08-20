@@ -13,7 +13,7 @@ namespace ClientPlugin.Patches.Audio;
 public static class MyPlatformAudioPatch
 {
     [HarmonyTranspiler]
-    [HarmonyPatch("InitAudioEngine")]
+    [HarmonyPatch(nameof(MyPlatformAudio.InitAudioEngine))]
     private static IEnumerable<CodeInstruction> InitAudioEngineTranspiler(IEnumerable<CodeInstruction> instructions, MethodBase patchedMethod)
     {
         var il = instructions.ToList();
