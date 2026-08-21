@@ -13,7 +13,7 @@ public static class MyWindowsSystemPatch
     private static bool GetOsNamePrefix(ref string __result)
     {
         // The native binding cannot marshal its by-value Out string on .NET 10.
-        __result = "Windows";
+        __result = OperatingSystem.IsLinux() ? "Linux" : "Windows";
         return false;
     }
 
