@@ -69,6 +69,7 @@ public static class MyGuiScreenMainMenuBasePatch
 
     public static string AppendFrameworkDescription(string text)
     {
-        return $"{text} on {RuntimeInformation.FrameworkDescription}";
+        var os = OperatingSystem.IsLinux() ? "Linux " : "";
+        return $"{text} on {os}{RuntimeInformation.FrameworkDescription}";
     }
 }
