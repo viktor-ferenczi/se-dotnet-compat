@@ -1,5 +1,8 @@
-﻿using HarmonyLib;
+﻿using ClientPlugin.Rewriter;
+using HarmonyLib;
+using Microsoft.CodeAnalysis.CSharp;
 using VRage.Plugins;
+using VRage.Scripting;
 // Define assembly version when compiled by Pulsar
 #if !LOCAL_BUILD
 using System.Reflection;
@@ -14,6 +17,9 @@ namespace ClientPlugin;
 public class Plugin : IPlugin
 {
     public const string Name = "DotNetCompat";
+
+    public static CSharpCompilation Rewrite(CSharpCompilation compilation, MyApiTarget target) =>
+        CompilationRewriter.Rewrite(compilation, target);
 
     [System.Runtime.CompilerServices.MethodImpl(
         System.Runtime.CompilerServices.MethodImplOptions.NoInlining
