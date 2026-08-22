@@ -56,6 +56,16 @@ public static class Preloader
         }
     }
 
+    [System.Runtime.CompilerServices.MethodImpl(
+        System.Runtime.CompilerServices.MethodImplOptions.NoInlining
+    )]
+    public static void Initialize()
+    {
+        // Must run before any plugin's Finish hook applies the first Harmony
+        // patch, which installs MonoMod's JIT hook.
+        Shared.Tools.ThreadStaticsPrewarm.Run();
+    }
+
     public static IEnumerable<string> TargetDLLs { get; } =
     [
         // Game DLLs
