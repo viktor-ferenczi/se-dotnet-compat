@@ -1,4 +1,5 @@
 <Project>
+    <!-- Folders overridable by Directory.Build.props.user -->
     <PropertyGroup>
         <!-- Folder containing SpaceEngineers.exe -->
         <Bin64></Bin64>
@@ -9,7 +10,9 @@
         <!-- Plugin Loader folders for automatic deployment -->
         <Pulsar></Pulsar>
         <Magnetar></Magnetar>
-        
+    </PropertyGroup>
+
+    <PropertyGroup>
         <!-- Both plugins load into 64-bit game processes and reference AMD64 game
              assemblies, so build them as x64 to avoid architecture mismatch (MSB3270). -->
         <PlatformTarget>x64</PlatformTarget>
@@ -19,6 +22,12 @@
         <AssemblyVersion>10.0.5.0</AssemblyVersion>
         <FileVersion>10.0.5.0</FileVersion>
     </PropertyGroup>
+
+    <!-- Local developer overrides for the variables above; ignored by Git (*.user).
+         Copy the first PropertyGroup of this file into Directory.Build.props.user
+         and fill in your local paths there. -->
+    <Import Project="$(MSBuildThisFileDirectory)Directory.Build.props.user"
+            Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.props.user')" />
 
     <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
         <SteamPath Condition="'$(SteamPath)' == ''">$(registry:HKEY_CURRENT_USER\SOFTWARE\Valve\Steam@SteamPath)</SteamPath>
