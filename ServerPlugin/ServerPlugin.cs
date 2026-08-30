@@ -26,6 +26,13 @@ public class Plugin : IPlugin
     )]
     public void Init(object gameInstance)
     {
+        // .NET Framework resolved every installed Windows codepage through
+        // Encoding.GetEncoding; on modern .NET the legacy codepages live in an
+        // opt-in provider. Register it before any mod or game code asks for
+        // e.g. codepage 1252, so the lookup no longer depends on whether some
+        // game code path happened to register the provider first.
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
         var harmony = new Harmony("DotNetCompat");
         harmony.PatchCategory("Init");
     }
