@@ -24,6 +24,26 @@ public static class MyWindowsSystemPatch
         return false;
     }
 
+    // Both getters P/Invoke GfnRuntimeSdk.dll with no guard. The DLL does not
+    // resolve on .NET 10 (a headless server has no reason to ship it anyway),
+    // and the analytics session start reaches the first getter during world
+    // load. Answer "not on GeForce NOW" without touching the native library.
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(MyWindowsSystem.IsUsingGeforceNow), MethodType.Getter)]
+    private static bool IsUsingGeforceNowPrefix(ref bool __result)
+    {
+        __result = false;
+        return false;
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(nameof(MyWindowsSystem.IsUsingGeforceNowCloud), MethodType.Getter)]
+    private static bool IsUsingGeforceNowCloudPrefix(ref bool __result)
+    {
+        __result = false;
+        return false;
+    }
+
     [HarmonyPrefix]
     [HarmonyPatch(nameof(MyWindowsSystem.GetInfoCPU))]
     private static bool GetInfoCPUPrefix(

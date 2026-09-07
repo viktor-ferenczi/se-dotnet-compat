@@ -9,7 +9,7 @@ using Shared.Tools;
 
 namespace Shared.Patches.CrashReporting;
 
-[HarmonyPatchCategory("Init")]
+[HarmonyPatchCategory("Finish")]
 [HarmonyPatch(typeof(MyInitializer))]
 public static class MyInitializerPatch
 {

@@ -5,7 +5,7 @@ using VRage.FileSystem;
 
 namespace Shared.Patches.Windows;
 
-[HarmonyPatchCategory("Init")]
+[HarmonyPatchCategory("Finish")]
 [HarmonyPatch(
     typeof(MyFileProviderAggregator),
     nameof(MyFileProviderAggregator.GetFiles),

@@ -4,7 +4,7 @@ using VRage.Analytics;
 
 namespace Shared.Patches.NullSafety;
 
-[HarmonyPatchCategory("Init")]
+[HarmonyPatchCategory("Finish")]
 [HarmonyPatch(typeof(MyAnalyticsBase))]
 public static class MyAnalyticsBasePatch
 {

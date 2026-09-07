@@ -26,13 +26,11 @@ public class Plugin : IPlugin
     )]
     public void Init(object gameInstance)
     {
-        // .NET Framework resolved every installed Windows codepage through
-        // Encoding.GetEncoding; on modern .NET the legacy codepages live in an
-        // opt-in provider. Register it before any mod or game code asks for
-        // e.g. codepage 1252, so the lookup no longer depends on whether some
-        // game code path happened to register the provider first.
-        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-
+        // The game calls IPlugin.Init only after MySandboxGame.Initialize(), and
+        // on a dedicated server that call has already loaded the world. Anything
+        // the world load depends on belongs in the "Finish" category, applied
+        // from Preloader.Finish before the game starts. "Init" is for patches
+        // that need a running game instance.
         var harmony = new Harmony("DotNetCompat");
         harmony.PatchCategory("Init");
     }

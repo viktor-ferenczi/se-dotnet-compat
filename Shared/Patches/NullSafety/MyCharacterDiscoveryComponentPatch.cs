@@ -5,7 +5,7 @@ using SpaceEngineers.Game.EntityComponents.GameLogic.Discovery;
 
 namespace Shared.Patches.NullSafety;
 
-[HarmonyPatchCategory("Init")]
+[HarmonyPatchCategory("Finish")]
 [HarmonyPatch(typeof(MyCharacterDiscoveryComponent))]
 public static class MyCharacterDiscoveryComponentPatch
 {
