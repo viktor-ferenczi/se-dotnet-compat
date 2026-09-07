@@ -6,7 +6,7 @@ using VRage.Sync;
 
 namespace Shared.Patches.NullSafety;
 
-[HarmonyPatchCategory("Init")]
+[HarmonyPatchCategory("Finish")]
 [HarmonyPatch(typeof(MyPropertySyncStateGroup))]
 public static class MyPropertySyncStateGroupPatch
 {

@@ -120,6 +120,13 @@ public static class Preloader
         // Load this before the game can bind to Keen's copy.
         Assembly.Load("System.Collections.Immutable");
 
+        // .NET Framework resolved every installed Windows codepage through
+        // Encoding.GetEncoding; on modern .NET the legacy codepages live in an
+        // opt-in provider. Register it before any mod or game code asks for
+        // e.g. codepage 1252. This has to happen here rather than in Plugin.Init:
+        // a dedicated server loads its world, mods included, before Init runs.
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
         AppDomain.CurrentDomain.AssemblyResolve += ResolveOverriddenAssembly;
 
 #if DEBUG && HARMONY_DEBUG

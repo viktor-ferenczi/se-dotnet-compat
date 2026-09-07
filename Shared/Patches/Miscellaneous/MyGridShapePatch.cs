@@ -8,7 +8,7 @@ using VRageMath;
 
 namespace Shared.Patches.Miscellaneous;
 
-[HarmonyPatchCategory("Init")]
+[HarmonyPatchCategory("Finish")]
 [HarmonyPatch(typeof(MyGridShape))]
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public static class MyGridShapePatch

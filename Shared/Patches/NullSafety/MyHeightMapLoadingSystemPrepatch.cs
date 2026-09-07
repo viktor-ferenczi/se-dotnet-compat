@@ -1,13 +1,12 @@
 using System.Linq;
-using HarmonyLib;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Shared.Tools;
 
 namespace Shared.Patches.NullSafety;
 
-[HarmonyPatch]
-[HarmonyPatchCategory("Init")]
+// Cecil prepatch, invoked explicitly from Preloader.Patch. Not a Harmony patch
+// class, so it carries no Harmony attributes or category.
 public static class MyHeightMapLoadingSystemPrepatch
 {
     public static void Prepatch(AssemblyDefinition asmDef)

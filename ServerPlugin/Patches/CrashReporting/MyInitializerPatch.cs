@@ -6,7 +6,7 @@ using Sandbox;
 
 namespace ServerPlugin.Patches.CrashReporting;
 
-[HarmonyPatchCategory("Init")]
+[HarmonyPatchCategory("Finish")]
 [HarmonyPatch(typeof(MyInitializer))]
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public static class MyInitializerServerPatch
@@ -21,7 +21,11 @@ public static class MyInitializerServerPatch
     [SuppressMessage("ReSharper", "UnusedMember.Local")]
     private static void InitExceptionHandlingPrefix()
     {
-        SetErrorMode(SEM_NOGPFAULTERRORBOX);
+        // Windows-only API. The prefix used to be dead on every platform (it was
+        // applied after InitExceptionHandling had already run), so the Linux
+        // server never reached this P/Invoke before.
+        if (OperatingSystem.IsWindows())
+            SetErrorMode(SEM_NOGPFAULTERRORBOX);
     }
 
     [HarmonyPrefix]
